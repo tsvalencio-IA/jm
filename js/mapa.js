@@ -47,7 +47,7 @@
 
   function resetMap(containerId, container) {
     if (liveMaps[containerId]) {
-      try { liveMaps[containerId].remove(); } catch (_) {}
+      try { (liveMaps[containerId].map || liveMaps[containerId]).remove(); } catch (_) {}
       delete liveMaps[containerId];
     }
     if (container && container._leaflet_id) {
@@ -66,6 +66,14 @@
     const router = window.JM && (window.JM.freeRouter || window.JM.googleMaps);
     const cleanPoints = pts.map((p) => p.point).filter(Boolean);
     let route = null;
+    const storedGeometry = call && (call.routeGeometry || call.routeMetrics && call.routeMetrics.fullRoute && call.routeMetrics.fullRoute.geometry);
+    const storedLatLngs = storedGeometry ? geoJsonToLatLngs(storedGeometry) : [];
+    if (storedLatLngs.length >= 2) {
+      storedLatLngs.forEach((p) => bounds.push(p));
+      L.polyline(storedLatLngs, { color: "#22c55e", weight: 6, opacity: 0.86 }).addTo(map)
+        .bindPopup(routeTitle(call, { isPrecise: true, distanceText: call.routeDistanceText || "" }, routeKm(pts)));
+      return { source: "stored_route", isPrecise: true };
+    }
     if (router && typeof router.routeThroughPoints === "function" && cleanPoints.length >= 2) {
       route = await router.routeThroughPoints(cleanPoints, window.JM_MAP_SETTINGS || {});
     }
@@ -165,39 +173,49 @@
     }
     try {
       const L = await loadLeaflet();
-      resetMap(containerId, container);
-      container.innerHTML = "";
-      const map = L.map(containerId, { scrollWheelZoom: false });
-      liveMaps[containerId] = map;
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap"
-      }).addTo(map);
+      let entry = liveMaps[containerId];
+      if (!entry || !entry.map) {
+        container.innerHTML = "";
+        const map = L.map(containerId, { scrollWheelZoom: false });
+        const layer = L.layerGroup().addTo(map);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap"
+        }).addTo(map);
+        entry = liveMaps[containerId] = { map, layer, renderToken: 0 };
+      }
+      const map = entry.map;
+      entry.renderToken += 1;
+      const token = entry.renderToken;
+      entry.layer.clearLayers();
       const bounds = [];
       located.forEach((vehicle) => {
+        if (!liveMaps[containerId] || liveMaps[containerId].renderToken !== token) return;
         const livePoint = vehicleLivePoint(vehicle);
         if (!livePoint) return;
         const p = [Number(livePoint.lat), Number(livePoint.lng)];
         bounds.push(p);
         const isSelected = options.selectedVehicleId && vehicle.id === options.selectedVehicleId;
         const source = String(vehicle.gpsSource || "").includes("driver_phone") ? "GPS celular" : (vehicle.trackerStatus || "GPS/Tracker");
-        const marker = L.marker(p, { zIndexOffset: isSelected ? 900 : 0 }).addTo(map)
+        const marker = L.marker(p, { zIndexOffset: isSelected ? 900 : 0 }).addTo(entry.layer)
           .bindPopup(`<b>${esc(vehicle.placa || vehicle.id || "")}</b><br>${esc(vehicle.apelido || vehicle.tipo || "")}<br>${esc(source)}<br>${vehicle.lastPhoneGpsAt ? "Celular: " + esc(vehicle.lastPhoneGpsAt) : ""}`);
         if (isSelected) {
-          L.circleMarker(p, { radius: 17, weight: 4, color: "#22c55e", fillOpacity: 0.08 }).addTo(map);
+          L.circleMarker(p, { radius: 17, weight: 4, color: "#22c55e", fillOpacity: 0.08 }).addTo(entry.layer);
           marker.openPopup();
         }
       });
       for (const { call, pts } of routedCalls) {
+        if (!liveMaps[containerId] || liveMaps[containerId].renderToken !== token) return;
         const callSelected = options.selectedCallId && call.id === options.selectedCallId;
         pts.forEach((p) => {
           const latlng = [p.point.lat, p.point.lng];
           bounds.push(latlng);
           const kindColor = p.kind === "origin" ? "#22c55e" : p.kind === "destination" ? "#ef4444" : p.kind === "driver_phone" ? "#a78bfa" : p.kind === "vehicle" ? "#38bdf8" : "#f59e0b";
-          L.circleMarker(latlng, { radius: callSelected ? 9 : 6, weight: callSelected ? 4 : 2, color: kindColor, fillOpacity: callSelected ? 0.45 : 0.25 }).addTo(map).bindPopup(`<b>${esc(p.label || "Ponto")}</b><br>${esc(call.protocolo || call.cliente || "Chamado")}`);
+          L.circleMarker(latlng, { radius: callSelected ? 9 : 6, weight: callSelected ? 4 : 2, color: kindColor, fillOpacity: callSelected ? 0.45 : 0.25 }).addTo(entry.layer).bindPopup(`<b>${esc(p.label || "Ponto")}</b><br>${esc(call.protocolo || call.cliente || "Chamado")}`);
         });
-        if (pts.length >= 2) await addRouteLayer(L, map, call, pts, bounds);
+        if (pts.length >= 2) await addRouteLayer(L, entry.layer, call, pts, bounds);
       }
+      if (!liveMaps[containerId] || liveMaps[containerId].renderToken !== token) return;
       if (bounds.length === 1) map.setView(bounds[0], 14);
       else map.fitBounds(bounds, { padding: [32, 32] });
       setTimeout(() => map.invalidateSize(), 120);
@@ -209,8 +227,8 @@
   }
 
   function invalidateAll() {
-    Object.values(liveMaps).forEach((map) => {
-      try { map.invalidateSize(); } catch (_) {}
+    Object.values(liveMaps).forEach((entry) => {
+      try { (entry.map || entry).invalidateSize(); } catch (_) {}
     });
   }
 

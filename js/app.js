@@ -10,9 +10,10 @@
   const { auth, secondaryAuth, db, ts, arrayUnion, emailIsAdmin, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
   const SYSTEM_SIGNATURE = "Powered by thIAguinho Soluções Digitais";
-  const LOGIN_FLOW_VERSION = "jm-v19-5-modulo-gps-celular-rtdb";
+  const LOGIN_FLOW_VERSION = "jm-v20-entrega-final-operacional";
   let trackerTimer = null;
   let trackerBusy = false;
+  let mapRefreshTimer = null;
 
   const state = {
     user: null,
@@ -25,6 +26,7 @@
     maintenance: {},
     customers: {},
     integrationInbox: {},
+    trackerProviders: {},
     settings: {},
     addresses: { origin: null, destination: null, waypoints: [] },
     smartRoute: null,
@@ -180,13 +182,19 @@
     state.mobileGps = { vehicles: {}, calls: {} };
   }
 
+  function scheduleMapRefresh(delay) {
+    clearTimeout(mapRefreshTimer);
+    mapRefreshTimer = setTimeout(() => {
+      try { refreshMaps(); } catch (err) { console.warn("Falha ao atualizar mapa", err); }
+    }, delay == null ? 120 : delay);
+  }
+
   function startMobileGpsRealtimeListeners() {
     clearMobileGpsRealtimeListeners();
     if (!isMobileGpsRealtime() || !getRealtimeDb) return;
     const gps = activeMobileGpsSettings();
     const rtdb = getRealtimeDb(gps.databaseURL);
     if (!rtdb) return;
-    const poll = Math.max(5000, Number(gps.pollingMs || 10000));
     const refs = [
       { key: "vehicles", ref: rtdb.ref("mobileGps/vehicles") },
       { key: "calls", ref: rtdb.ref("mobileGps/calls") }
@@ -195,7 +203,7 @@
       const handler = (snap) => {
         const value = snap.val() || {};
         state.mobileGps[item.key] = value;
-        renderAll();
+        scheduleMapRefresh(80);
       };
       item.ref.on("value", handler, (err) => console.warn("Falha RTDB GPS", item.key, err));
       state.mobileGpsUnsubs.push(() => item.ref.off("value", handler));
@@ -1150,9 +1158,10 @@
 
   async function syncTrackerNow(manual) {
     const tracker = activeTrackerSettings();
-    if (!tracker.endpoint || !tracker.token) {
-      setTrackerStatus("Tracker sem endpoint/token. Configure no superadmin.", "warn");
-      if (manual) toast("Configure endpoint e token do Tracker no superadmin.", "danger");
+    const providers = visibleRows(state.trackerProviders).filter((p) => p.active !== false);
+    if (!providers.length && (!tracker.endpoint || !tracker.token)) {
+      setTrackerStatus("Tracker sem endpoint/token. Configure RAFA ou um provedor no superadmin.", "warn");
+      if (manual) toast("Configure endpoint e token do Tracker ou cadastre um provedor no superadmin.", "danger");
       return [];
     }
     if (!canManageTracker()) {
@@ -1162,13 +1171,15 @@
     if (trackerBusy) return [];
     trackerBusy = true;
     try {
-      setTrackerStatus("Sincronizando Tracker RAFA...", "info");
-      const positions = await window.JM.tracker.syncTrackerToFirestore(tracker, db, state.vehicles);
+      setTrackerStatus(providers.length ? "Sincronizando rastreadores ativos..." : "Sincronizando Tracker RAFA...", "info");
+      const positions = window.JM.tracker.syncAllTrackersToFirestore
+        ? await window.JM.tracker.syncAllTrackersToFirestore({ legacyTracker: tracker, providers, db, vehicles: state.vehicles })
+        : await window.JM.tracker.syncTrackerToFirestore(tracker, db, state.vehicles);
       const matched = positions.filter((p) => p.trackerMatched).length;
       const unmapped = positions.length - matched;
       const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
       const detail = unmapped > 0 ? ` (${unmapped} sem vinculo com placa; ajuste o deviceId no superadmin)` : "";
-      setTrackerStatus(`Tracker RAFA sincronizado: ${positions.length} posição(ões), ${matched} vinculada(s) às ${now}${detail}.`, unmapped > 0 ? "warn" : "ok");
+      setTrackerStatus(`Rastreamento sincronizado: ${positions.length} posição(ões), ${matched} vinculada(s) às ${now}${detail}.`, unmapped > 0 ? "warn" : "ok");
       if (manual) toast(`${positions.length} posição(ões) sincronizada(s), ${matched} vinculada(s).${detail}`, unmapped > 0 ? "warn" : "ok");
       return positions;
     } catch (err) {
@@ -1187,12 +1198,14 @@
       trackerTimer = null;
     }
     const tracker = activeTrackerSettings();
-    if (!tracker.endpoint || !tracker.token) {
+    const providers = visibleRows(state.trackerProviders).filter((p) => p.active !== false);
+    if (!providers.length && (!tracker.endpoint || !tracker.token)) {
       setTrackerStatus("Tracker aguardando endpoint/token no superadmin.", "warn");
       return;
     }
-    const polling = Math.max(15000, Number(tracker.pollingMs || 30000));
-    setTrackerStatus("Tracker configurado. Atualização automática a cada " + Math.round(polling / 1000) + "s.", "ok");
+    const providerPolling = providers.length ? providers.reduce((min, p) => Math.min(min, Number(p.pollingMs || 30000)), 30000) : Number(tracker.pollingMs || 30000);
+    const polling = Math.max(15000, providerPolling);
+    setTrackerStatus("Rastreamento configurado. Atualização automática a cada " + Math.round(polling / 1000) + "s.", "ok");
     syncTrackerNow(false);
     trackerTimer = setInterval(() => syncTrackerNow(false), polling);
   }
@@ -1213,7 +1226,7 @@
 
   function startListeners() {
     unsubscribers.splice(0).forEach((fn) => fn());
-    const baseCollections = ["vehicles", "calls", "users", "customers", "integrationInbox"];
+    const baseCollections = ["vehicles", "calls", "users", "customers", "integrationInbox", "trackerProviders"];
     if (canManageFinance()) baseCollections.push("expenses", "transactions");
     if (canManageFleet() || canManageFinance()) baseCollections.push("maintenance");
     baseCollections.forEach((name) => listenCollection(name, name));
@@ -1344,6 +1357,10 @@
     setOptionsPreservingValue("expenseVehicle", `<option value="">Selecione</option>${vehicleOptions}`);
     setOptionsPreservingValue("finVehicle", `<option value="">Sem veículo</option>${vehicleOptions}`);
     setOptionsPreservingValue("maintenanceVehicle", `<option value="">Selecione</option>${vehicleOptions}`);
+    const providerOptions = visibleRows(state.trackerProviders)
+      .sort((a, b) => Number(a.priority || 50) - Number(b.priority || 50))
+      .map((p) => `<option value="${esc(p.id)}">${esc(p.name || p.id)} - ${esc(p.providerType || "")}</option>`).join("");
+    setOptionsPreservingValue("vehicleTrackerProvider", `<option value="">RAFA/automático</option>${providerOptions}<option value="mobile_gps">GPS celular</option><option value="manual">Manual</option>`);
     const drivers = visibleRows(state.users).filter((u) => u.active !== false && DRIVER_ROLES.includes(normalizedRole(u.role)));
     const driverOptions = drivers.map((u) => `<option value="${esc(u.id)}">${esc(u.nome || u.email)}</option>`).join("");
     setOptionsPreservingValue("callDriver", `<option value="">Selecione</option>` + drivers.map((u) => `<option value="${esc(u.id)}">${esc(u.nome || u.email)}</option>`).join(""));
@@ -1556,6 +1573,7 @@
       dispatchedBy: state.user.uid,
       timeline: arrayUnion({ at: new Date().toISOString(), by: state.profile.nome || state.user.email, text: "Veículo " + (vehicle && (vehicle.placa || vehicle.id) || vehicleId) + " despachado pela Central Operacional" })
     });
+    await syncPublicCall(callId, { vehicleId, status: "Despachado", statusKey: "despachado" });
     toast("Veículo despachado para o chamado.", "ok");
   }
 
@@ -1765,6 +1783,7 @@ Rota: ${url}`;
       updates.closedByEmail = state.user.email;
       updates.locked = true;
       await db.collection("calls").doc(id).update(updates);
+      await syncPublicCall(id, updates);
       return toast("Chamado marcado como finalizado operacional, mas não ficou pronto para faturar: faltam checklist, fotos obrigatórias ou assinatura/aceite.", "warn");
     }
     if (key === "finalizado" && Number(call.valor || 0) > 0) {
@@ -1779,6 +1798,7 @@ Rota: ${url}`;
       updates.finalizedAt = updates.closedAt;
     }
     await db.collection("calls").doc(id).update(updates);
+    await syncPublicCall(id, updates);
     if (key === "finalizado" && Number(call.valor || 0) > 0 && canManageFinance()) {
       await upsertCallReceivable(id, { status: "A receber", amount: Number(call.valor || 0) });
       toast("Status atualizado e conta a receber do chamado gerada automaticamente.", "ok");
@@ -1915,6 +1935,7 @@ Rota: ${url}`;
       billingStatus: Number(call.valor || 0) > 0 ? "a_faturar" : call.billingStatus || "sem_valor",
       timeline: arrayUnion({ at: new Date().toISOString(), by: personName(), text: "Gestão revisou provas do atendimento para faturamento" })
     }, { merge: true });
+    await syncPublicCall(id, { proofStatus: "revisado", billingStatus: Number(call.valor || 0) > 0 ? "a_faturar" : call.billingStatus || "sem_valor" });
     toast("Provas revisadas. Chamado liberado para faturamento.", "ok");
   }
 
@@ -1932,6 +1953,192 @@ Rota: ${url}`;
     if (!win) return toast("O navegador bloqueou a janela de provas.", "danger");
     win.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Provas ${esc(call.protocolo || id)}</title><style>body{font-family:Arial,sans-serif;padding:18px;color:#111827} h1{margin-bottom:4px} .muted{color:#64748b}</style></head><body><h1>Provas do atendimento ${esc(call.protocolo || id)}</h1><p class="muted">${esc(call.cliente || "")} · ${esc(call.insurance || "")} · ${esc(call.customerPlate || "")}</p><h2>Checklist</h2><ul>${checklistHtml}</ul><p>${esc(checklist.notes || "")}</p><h2>Assinatura</h2>${sigHtml}<h2>Fotos</h2>${photoHtml}</body></html>`);
     win.document.close();
+  }
+
+  function publicStatusLabel(call) {
+    const key = statusKey(call);
+    const labels = {
+      aguardando_despacho: "Atendimento recebido",
+      despachado: "Guincho em preparação",
+      motorista_a_caminho: "Motorista a caminho",
+      motorista_no_local: "Motorista chegou ao local",
+      veiculo_carregado: "Veículo carregado",
+      em_transporte: "Veículo em remoção/transporte",
+      entregue: "Veículo entregue",
+      finalizado: "Atendimento finalizado",
+      cancelado: "Atendimento cancelado"
+    };
+    return labels[key] || "Atendimento recebido";
+  }
+
+  function publicToken() {
+    const bytes = new Uint8Array(18);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
+    else for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+    return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function publicClientUrl(token) {
+    return location.origin + location.pathname.replace(/jm\.html.*$/i, "cliente-chamado.html") + "?t=" + encodeURIComponent(token);
+  }
+
+  function publicReportUrl(token) {
+    return location.origin + location.pathname.replace(/jm\.html.*$/i, "relatorio.html") + "?t=" + encodeURIComponent(token);
+  }
+
+  function publicTimeline(call) {
+    const rows = Array.isArray(call.timeline) ? call.timeline : [];
+    return rows.slice(-20).map((event) => ({
+      at: event.at || event.dt || "",
+      status: event.status || publicStatusLabel(call),
+      text: event.publicText || event.text || event.acao || "",
+      by: event.by || "JM Guinchos"
+    }));
+  }
+
+  function publicProofs(call) {
+    if (!call.publicProofsEnabled) return [];
+    return proofPhotos(call).filter((photo) => {
+      const visibility = String(photo.visibility || "").toLowerCase();
+      return photo.approvedForClient === true || ["client", "public"].includes(visibility) || call.publicProofsEnabled === true;
+    }).map((photo) => ({
+      label: photo.label || photo.type || "Foto",
+      url: photo.cloudinaryUrl,
+      type: photo.type || "",
+      uploadedAt: photo.uploadedAt || ""
+    }));
+  }
+
+  function publicCallPayload(call) {
+    const driver = state.users[call.driverId] || {};
+    const vehicle = state.vehicles[call.vehicleId] || {};
+    const token = call.publicToken || publicToken();
+    return {
+      publicToken: token,
+      callId: call.id,
+      companyName: "JM Guinchos",
+      statusPublic: publicStatusLabel(call),
+      statusKey: statusKey(call),
+      serviceType: call.serviceType || call.tipo || "Guincho",
+      clientNameMasked: call.cliente || call.customerName || "Cliente",
+      customerPhone: call.publicChatEnabled ? (call.phone || "") : "",
+      vehiclePlateMasked: call.customerPlate || "",
+      customerVehicle: call.customerVehicle || "",
+      originLabel: call.publicRouteEnabled ? (call.originLabel || call.origem && call.origem.label || "") : "",
+      destinationLabel: call.publicRouteEnabled ? (call.destLabel || call.destino && call.destino.label || "") : "",
+      driverName: call.publicDriverEnabled ? (driver.nome || driver.email || "") : "",
+      fleetVehicle: call.publicDriverEnabled ? (vehicle.placa || vehicle.apelido || "") : "",
+      timelinePublic: publicTimeline(call),
+      proofsPublic: publicProofs(call),
+      reportEnabled: call.publicReportEnabled !== false,
+      chatEnabled: call.publicChatEnabled !== false,
+      paymentNegotiationEnabled: call.publicPaymentNegotiationEnabled === true,
+      paymentStatus: call.publicPaymentNegotiationEnabled ? (call.billingStatus || "") : "",
+      amountDue: call.publicPaymentNegotiationEnabled ? Number(call.financialSummary && call.financialSummary.balanceAmount || call.valor || 0) : 0,
+      whatsapp: (state.settings.company && state.settings.company.telefoneOperacional) || cfg.empresa && cfg.empresa.telefoneOperacional || "",
+      updatedAt: new Date().toISOString(),
+      revoked: call.publicRevoked === true,
+      expiresAt: call.publicTokenExpiresAt || ""
+    };
+  }
+
+  async function syncPublicCall(callId, extra) {
+    const call = Object.assign({}, state.calls[callId] || {});
+    Object.entries(extra || {}).forEach(([key, value]) => {
+      if (key === "timeline" && !Array.isArray(value)) return;
+      call[key] = value;
+    });
+    if (!call || !call.publicToken || call.publicRevoked) return;
+    await db.collection("publicCalls").doc(call.publicToken).set(publicCallPayload(call), { merge: true });
+  }
+
+  async function generatePublicLink(id) {
+    if (!canOperateCalls()) return toast("Sem permissão para gerar link público.", "danger");
+    const call = state.calls[id];
+    if (!call) return toast("Chamado não encontrado.", "danger");
+    const token = call.publicToken || publicToken();
+    const updates = {
+      publicTrackingEnabled: true,
+      publicToken: token,
+      publicTokenCreatedAt: call.publicTokenCreatedAt || new Date().toISOString(),
+      publicRevoked: false,
+      publicChatEnabled: call.publicChatEnabled !== false,
+      publicReportEnabled: call.publicReportEnabled !== false,
+      updatedAt: new Date().toISOString()
+    };
+    await db.collection("calls").doc(id).set(updates, { merge: true });
+    await db.collection("publicCalls").doc(token).set(publicCallPayload(Object.assign({}, call, updates)), { merge: true });
+    toast("Link público do cliente gerado.", "ok");
+    try { await navigator.clipboard.writeText(publicClientUrl(token)); } catch (_) {}
+  }
+
+  async function copyPublicLink(id) {
+    const call = state.calls[id];
+    if (!call || !call.publicToken || call.publicRevoked) return toast("Gere o link público antes de copiar.", "danger");
+    const url = publicClientUrl(call.publicToken);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Link do cliente copiado.", "ok");
+    } catch (_) {
+      window.prompt("Copie o link do cliente:", url);
+    }
+  }
+
+  function openPublicView(id) {
+    const call = state.calls[id];
+    if (!call || !call.publicToken || call.publicRevoked) return toast("Gere o link público antes de abrir.", "danger");
+    window.open(publicClientUrl(call.publicToken), "_blank");
+  }
+
+  async function revokePublicLink(id) {
+    if (!canOwnCompany() && !hasRole(["gerente"])) return toast("Somente gestor/dono ou gerente pode revogar link público.", "danger");
+    const call = state.calls[id];
+    if (!call || !call.publicToken) return toast("Chamado sem link público.", "danger");
+    await db.collection("calls").doc(id).set({ publicRevoked: true, publicTrackingEnabled: false, updatedAt: new Date().toISOString() }, { merge: true });
+    await db.collection("publicCalls").doc(call.publicToken).set({ revoked: true, updatedAt: new Date().toISOString() }, { merge: true });
+    toast("Link público revogado.", "ok");
+  }
+
+  async function togglePublicProofs(id) {
+    if (!canOwnCompany() && !hasRole(["gerente"])) return toast("Somente gestor/dono ou gerente pode liberar provas ao cliente.", "danger");
+    const call = state.calls[id];
+    if (!call) return;
+    const enabled = !call.publicProofsEnabled;
+    await db.collection("calls").doc(id).set({ publicProofsEnabled: enabled, updatedAt: new Date().toISOString() }, { merge: true });
+    await syncPublicCall(id, { publicProofsEnabled: enabled });
+    toast(enabled ? "Provas liberadas para o cliente." : "Provas bloqueadas para o cliente.", enabled ? "ok" : "warn");
+  }
+
+  async function togglePublicPayment(id) {
+    if (!canManageFinance()) return toast("Somente gestor/dono ou financeiro pode liberar negociação de pagamento.", "danger");
+    const call = state.calls[id];
+    if (!call) return;
+    const enabled = !call.publicPaymentNegotiationEnabled;
+    await db.collection("calls").doc(id).set({ publicPaymentNegotiationEnabled: enabled, updatedAt: new Date().toISOString() }, { merge: true });
+    await syncPublicCall(id, { publicPaymentNegotiationEnabled: enabled });
+    toast(enabled ? "Negociação de pagamento habilitada no link público." : "Negociação de pagamento desabilitada.", enabled ? "ok" : "warn");
+  }
+
+  function openReport(id) {
+    const call = state.calls[id];
+    if (call && call.publicToken && !call.publicRevoked) return window.open(publicReportUrl(call.publicToken), "_blank");
+    return viewCallProofs(id);
+  }
+
+  async function replyPublicChat(id) {
+    if (!canOperateCalls()) return toast("Sem permissão para responder cliente.", "danger");
+    const call = state.calls[id];
+    if (!call || !call.publicToken || call.publicRevoked) return toast("Gere um link público ativo antes de abrir o chat.", "danger");
+    const text = window.prompt("Mensagem para o cliente:");
+    if (!text || !text.trim()) return;
+    await db.collection("publicCalls").doc(call.publicToken).collection("messages").add({
+      senderType: "admin",
+      senderName: personName(),
+      message: text.trim(),
+      createdAt: new Date().toISOString(),
+      callId: id
+    });
+    toast("Mensagem enviada ao cliente.", "ok");
   }
 
   function renderCallDossier() {
@@ -1958,6 +2165,25 @@ Rota: ${url}`;
     }).join("");
     const photosHtml = photos.length ? photos.map((p) => `<a class="proof-thumb" target="_blank" href="${esc(p.cloudinaryUrl)}"><img src="${esc(p.cloudinaryUrl)}" alt="${esc(p.label || p.type || "foto")}"><span>${esc(p.label || p.type || "foto")}</span></a>`).join("") : `<p class="muted small">Sem fotos salvas.</p>`;
     const timeline = (call.timeline || []).slice().reverse().slice(0, 8).map((t) => `<div class="timeline-item"><b>${esc(t.by || t.user || "Sistema")}</b><br>${esc(t.text || t.acao || "")}<br><small>${dateTime(t.at || t.dt)}</small></div>`).join("") || `<p class="muted small">Sem auditoria operacional.</p>`;
+    const publicActive = call.publicToken && !call.publicRevoked;
+    const publicLink = publicActive ? publicClientUrl(call.publicToken) : "";
+    const publicHtml = `<div class="public-link-box">
+      <b>Link público do cliente</b><br>
+      <span class="badge ${publicActive ? "ok" : "muted"}">${publicActive ? "Ativo" : call.publicRevoked ? "Revogado" : "Não gerado"}</span>
+      ${call.publicProofsEnabled ? '<span class="badge ok">Provas liberadas</span>' : '<span class="badge warn">Provas internas</span>'}
+      ${call.publicPaymentNegotiationEnabled ? '<span class="badge info">Pagamento habilitado</span>' : ''}
+      <p class="small">${publicLink ? esc(publicLink) : "Gere um token para enviar ao cliente final sem expor o painel interno."}</p>
+      <div class="actions">
+        <button class="btn primary" onclick="JM.app.generatePublicLink('${esc(call.id)}')">Gerar link</button>
+        <button class="btn" onclick="JM.app.copyPublicLink('${esc(call.id)}')">Copiar link</button>
+        <button class="btn" onclick="JM.app.openPublicView('${esc(call.id)}')">Abrir visão</button>
+        <button class="btn" onclick="JM.app.togglePublicProofs('${esc(call.id)}')">${call.publicProofsEnabled ? "Bloquear provas" : "Liberar provas"}</button>
+        <button class="btn" onclick="JM.app.replyPublicChat('${esc(call.id)}')">Abrir chat</button>
+        <button class="btn" onclick="JM.app.openReport('${esc(call.id)}')">Relatório/PDF</button>
+        ${canManageFinance() ? `<button class="btn" onclick="JM.app.togglePublicPayment('${esc(call.id)}')">${call.publicPaymentNegotiationEnabled ? "Desabilitar pagamento" : "Habilitar negociação"}</button>` : ""}
+        ${publicActive ? `<button class="btn danger" onclick="JM.app.revokePublicLink('${esc(call.id)}')">Revogar link</button>` : ""}
+      </div>
+    </div>`;
     box.innerHTML = `
       <div class="dossier-head">
         <div><h3>${esc(call.protocolo || call.id)} · ${esc(call.cliente || "")}</h3><p class="muted small">${esc(call.insurance || call.source || "Particular")} ${call.insuranceProtocol ? "· Prot. " + esc(call.insuranceProtocol) : ""} · ${esc(call.customerPlate || "")}</p></div>
@@ -1970,6 +2196,7 @@ Rota: ${url}`;
         <section><h3>Assinatura</h3>${sigUrl ? `<p class="small"><b>${esc(sig.name || "Cliente")}</b><br>${esc(sig.document || "")}<br>${dateTime(sig.signedAt)}</p><img class="signature-preview" src="${esc(sigUrl)}" alt="Assinatura">` : `<p class="muted small">Sem assinatura.</p>`}</section>
         <section><h3>Financeiro</h3><p class="small">Cobrança: <b>${esc(call.billingStatus || "aberto")}</b><br>Valor previsto: <b>${canSeeSensitiveFinance() ? money(call.valor || 0) : "Restrito"}</b><br>Resultado lançado: <b>${canSeeSensitiveFinance() ? money(entradas - saidas) : "Restrito"}</b></p></section>
         <section><h3>Linha do tempo</h3>${timeline}</section>
+        <section><h3>Cliente final</h3>${publicHtml}</section>
       </div>`;
   }
 
@@ -2180,6 +2407,11 @@ Rota: ${url}`;
       tipo: $("vehicleType").value.trim(),
       trackerId: $("vehicleTrackerId") ? $("vehicleTrackerId").value.trim() : placa,
       trackerDeviceId: $("vehicleTrackerId") ? $("vehicleTrackerId").value.trim() : "",
+      trackerProviderId: $("vehicleTrackerProvider") ? $("vehicleTrackerProvider").value : "",
+      trackerExternalId: $("vehicleTrackerExternalId") ? $("vehicleTrackerExternalId").value.trim() : "",
+      trackerImei: $("vehicleTrackerImei") ? $("vehicleTrackerImei").value.trim() : "",
+      trackerPlate: $("vehicleTrackerPlate") ? plateKey($("vehicleTrackerPlate").value) : "",
+      trackerEnabled: $("vehicleTrackerEnabled") ? $("vehicleTrackerEnabled").value !== "false" : true,
       status: $("vehicleStatus").value,
       updatedAt: new Date().toISOString(),
       updatedBy: state.user.uid
@@ -2718,6 +2950,21 @@ Rota: ${url}`;
     const active = document.querySelector(".view.active");
     window.JM_MAP_SETTINGS = activeMapSettings();
     const vehicles = Object.fromEntries(visibleRows(state.vehicles).map(vehicleWithLiveGps).map((v) => [v.id, v]));
+    if (window.JM.tracker && typeof window.JM.tracker.getNormalizedFleetPositions === "function") {
+      const normalized = window.JM.tracker.getNormalizedFleetPositions(vehicles, state.mobileGps && state.mobileGps.vehicles || {});
+      normalized.forEach((pos) => {
+        if (!pos || !pos.vehicleId || !vehicles[pos.vehicleId]) return;
+        const current = vehicles[pos.vehicleId];
+        vehicles[pos.vehicleId] = Object.assign({}, current, {
+          location: { lat: pos.lat, lng: pos.lng },
+          gpsSource: pos.source || current.gpsSource || "tracker",
+          trackerStatus: pos.providerType ? ("Tracker " + pos.providerType) : current.trackerStatus,
+          trackerProviderId: pos.providerId || current.trackerProviderId || "",
+          trackerProviderType: pos.providerType || current.trackerProviderType || "",
+          lastTrackerAt: pos.updatedAt || current.lastTrackerAt || current.updatedAt
+        });
+      });
+    }
     const calls = Object.fromEntries(visibleRows(state.calls).map((c) => [c.id, c]));
     if (!active) return;
     if (active.id === "view-dashboard") window.JM.mapa.renderFleetMap("dashboardMap", vehicles, calls);
@@ -2780,6 +3027,14 @@ Rota: ${url}`;
     deleteCall,
     viewCallProofs,
     reviewCallProofs,
+    generatePublicLink,
+    copyPublicLink,
+    openPublicView,
+    revokePublicLink,
+    togglePublicProofs,
+    togglePublicPayment,
+    openReport,
+    replyPublicChat,
     selectCallDossier,
     reopenCall,
     editTeamMember,
@@ -2804,4 +3059,3 @@ Rota: ${url}`;
   };
   boot();
 }());
-

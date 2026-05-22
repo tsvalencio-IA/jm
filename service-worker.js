@@ -1,4 +1,4 @@
-const CACHE_NAME = "jm-v19-5-modulo-gps-celular-rtdb";
+const CACHE_NAME = "jm-v20-entrega-final-operacional";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,8 @@ const ASSETS = [
   "./formulario.html",
   "./motorista.html",
   "./superadmin.html",
+  "./cliente-chamado.html",
+  "./relatorio.html",
   "./manifest.json",
   "./css/style.css",
   "./js/config.firebase.js",
@@ -67,4 +69,3 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-

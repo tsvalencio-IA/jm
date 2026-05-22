@@ -1,4 +1,4 @@
-# JM Guinchos V16 - refino SaaS para guincho, seguradoras e operação 24h
+﻿# JM Guinchos V16 - refino SaaS para guincho, seguradoras e operação 24h
 
 Esta entrega consolida a V15 como `JM-GUINCHOS-v16-refino-saas-guincho-seguradoras`.
 
@@ -24,7 +24,7 @@ Esta versão mantém o sistema em frontend estático/GitHub Pages, mas separa me
 1. Suba todos os arquivos desta pasta.
 2. Publique o conteúdo de `firestore.rules` no Firebase Console.
 3. Ative login Email/Senha no Firebase Authentication.
-4. Abra `superadmin.html?v=jm-v18-provas-assinatura-seguradoras`.
+4. Abra `superadmin.html?v=jm-v20-entrega-final-operacional`.
 5. Entre/crie o primeiro superadmin com `tsvalencio@gmail.com`.
 6. Em Tracker, salve:
    - plataforma: `https://gps2.rafacarrastreadores.com.br`
@@ -35,7 +35,7 @@ Esta versão mantém o sistema em frontend estático/GitHub Pages, mas separa me
    - polling: `30000` ou maior
 7. Em Rastreadores da frota, informe o `deviceId` ou `uniqueId` real do Traccar para a placa correta.
 8. Clique em `Criar base JM` e depois em `Sincronizar Tracker`.
-9. Abra `jm.html?v=jm-v18-provas-assinatura-seguradoras` e entre com `jm@jm.com`.
+9. Abra `jm.html?v=jm-v20-entrega-final-operacional` e entre com `jm@jm.com`.
 
 ## Device Trackar Validado
 
@@ -121,5 +121,7 @@ A v16 não remove a V14. As rotas por ruas/rodovias continuam usando OSM/OSRM se
 Versão de cache/PWA:
 
 ```txt
-jm-v18-provas-assinatura-seguradoras
+jm-v20-entrega-final-operacional
 ```
+
+

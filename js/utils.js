@@ -337,11 +337,27 @@
       return Array.from(parent.children || []).find((el) => el.matches && el.matches(selector)) || null;
     }
 
+    function panelKey(panel, title, index) {
+      const raw = panel.id || (title.textContent || "painel").trim() || String(index);
+      return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_-]+/g, "-").replace(/^-|-$/g, "");
+    }
+
+    function invalidateVisuals() {
+      setTimeout(() => {
+        try { window.dispatchEvent(new Event("resize")); } catch (_) {}
+        if (window.JM && window.JM.mapa && typeof window.JM.mapa.invalidateAll === "function") {
+          try { window.JM.mapa.invalidateAll(); } catch (_) {}
+        }
+      }, 140);
+    }
+
     panels.forEach((panel, index) => {
       if (!panel || panel.dataset.noCollapse === "true" || panel.classList.contains("no-collapse") || panel.closest(".login")) return;
 
       let head = directChild(panel, ".panel-collapse-head");
-      let title = head ? (head.querySelector("h2,h3") || null) : directChild(panel, "h2,h3");
+      let body = directChild(panel, ".panel-collapse-body");
+      let title = head ? head.querySelector("h2,h3") : directChild(panel, "h2,h3");
+      if (!title && body) title = body.querySelector(":scope > h2,:scope > h3");
       if (!title) return;
 
       if (!head) {
@@ -351,17 +367,6 @@
       }
       if (title.parentElement !== head) head.insertBefore(title, head.firstChild);
 
-      let button = Array.from(head.children || []).find((el) => el.classList && el.classList.contains("panel-collapse-toggle"));
-      if (!button) {
-        button = directChild(panel, ".panel-collapse-toggle") || document.createElement("button");
-        button.type = "button";
-        button.className = "btn panel-collapse-toggle";
-        head.appendChild(button);
-      } else if (button.parentElement !== head) {
-        head.appendChild(button);
-      }
-
-      let body = directChild(panel, ".panel-collapse-body");
       if (!body) {
         body = document.createElement("div");
         body.className = "panel-collapse-body";
@@ -375,25 +380,24 @@
         });
       }
 
+      let button = Array.from(head.children || []).find((el) => el.classList && el.classList.contains("panel-collapse-toggle"));
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn panel-collapse-toggle";
+        head.appendChild(button);
+      }
+
       const rawTitle = (title.textContent || "painel").trim() || "painel";
-      const keyBase = panel.id || rawTitle.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || String(index);
+      const keyBase = panelKey(panel, title, index);
       const storageKey = "jm-panel-collapsed:" + location.pathname + ":" + keyBase;
-      const isMapPanel = !!body.querySelector(".map,.ops-map,#map,#driverMap");
-      const isCriticalForm = !!body.querySelector("#callForm,#financeForm,#paymentForm,#maintenanceForm,#driverProofForm,#driverExpenseForm,#driverReportForm");
+      const isMapPanel = !!body.querySelector(".map,.ops-map,#map,#driverMap,#operationMap,#fleetMap,#dashboardMap");
+      const isCriticalForm = !!body.querySelector("#callForm,#financeForm,#paymentForm,#maintenanceForm,#driverProofForm,#driverExpenseForm,#driverReportForm,#superMobileGpsForm");
 
       panel.classList.add("is-collapsible");
       body.setAttribute("data-panel-body", "true");
       button.setAttribute("aria-label", "Minimizar ou maximizar " + rawTitle);
       button.setAttribute("title", "Minimizar ou maximizar este painel");
-
-      function invalidateVisuals() {
-        setTimeout(() => {
-          try { window.dispatchEvent(new Event("resize")); } catch (_) {}
-          if (window.JM && window.JM.mapa && typeof window.JM.mapa.invalidateAll === "function") {
-            try { window.JM.mapa.invalidateAll(); } catch (_) {}
-          }
-        }, 160);
-      }
 
       function setCollapsed(collapsed, persist) {
         const isCollapsed = !!collapsed;
@@ -401,31 +405,6 @@
         panel.classList.toggle("collapsed", isCollapsed);
         body.hidden = isCollapsed;
         body.setAttribute("aria-hidden", String(isCollapsed));
-        if (isCollapsed) {
-          body.style.setProperty("display", "none", "important");
-          body.style.setProperty("visibility", "hidden", "important");
-          body.style.setProperty("height", "0", "important");
-          body.style.setProperty("overflow", "hidden", "important");
-          body.style.setProperty("padding", "0", "important");
-          body.style.setProperty("margin", "0", "important");
-        } else {
-          body.style.removeProperty("display");
-          body.style.removeProperty("visibility");
-          body.style.removeProperty("height");
-          body.style.removeProperty("overflow");
-          body.style.removeProperty("padding");
-          body.style.removeProperty("margin");
-        }
-        Array.from(panel.children || []).forEach((child) => {
-          if (child === head) return;
-          if (isCollapsed) {
-            child.setAttribute("data-panel-hidden-by-collapse", "true");
-            child.style.setProperty("display", "none", "important");
-          } else if (child.getAttribute("data-panel-hidden-by-collapse") === "true") {
-            child.removeAttribute("data-panel-hidden-by-collapse");
-            child.style.removeProperty("display");
-          }
-        });
         button.textContent = isCollapsed ? "Maximizar" : "Minimizar";
         button.setAttribute("aria-expanded", String(!isCollapsed));
         if (persist !== false) {

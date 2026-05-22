@@ -6,6 +6,7 @@
   const cfg = window.JM_CONFIG || {};
   let settings = {};
   let vehicles = {};
+  let trackerProviders = {};
 
 
 
@@ -105,6 +106,12 @@
     db.collection("vehicles").onSnapshot((snap) => {
       vehicles = {};
       snap.forEach((doc) => { vehicles[doc.id] = { id: doc.id, ...doc.data() }; });
+      renderTrackerProviders();
+    });
+    db.collection("trackerProviders").onSnapshot((snap) => {
+      trackerProviders = {};
+      snap.forEach((doc) => { trackerProviders[doc.id] = { id: doc.id, ...doc.data() }; });
+      renderTrackerProviders();
     });
   }
 
@@ -166,17 +173,21 @@
       updatedAt: now
     }, { merge: true });
     await batch.commit();
+    await ensureLegacyRafaProvider(now);
     toast("Base JM criada/atualizada com FHA4B30 e DAJ6J95.", "ok");
   }
 
   async function syncTracker() {
     const tracker = Object.assign({}, mergeNonEmpty(cfg.tracker || {}, settings.tracker || {}), { vehicles: currentVehicles() });
-    if (!tracker.endpoint || !tracker.token) {
+    const providers = Object.values(trackerProviders || {});
+    if (!providers.some((p) => p.active !== false) && (!tracker.endpoint || !tracker.token)) {
       toast("Configure endpoint e token do Tracker antes de sincronizar.", "danger");
       return;
     }
     try {
-      const positions = await window.JM.tracker.syncTrackerToFirestore(tracker, db, vehicles);
+      const positions = window.JM.tracker.syncAllTrackersToFirestore
+        ? await window.JM.tracker.syncAllTrackersToFirestore({ legacyTracker: tracker, providers, db, vehicles })
+        : await window.JM.tracker.syncTrackerToFirestore(tracker, db, vehicles);
       const matched = positions.filter((p) => p.trackerMatched).length;
       const unmapped = positions.length - matched;
       const detail = unmapped > 0 ? ` ${unmapped} sem vinculo com placa; preencha o deviceId/uniqueId correto em Rastreadores da frota.` : "";
@@ -185,6 +196,127 @@
       console.error(err);
       toast("Tracker indisponível: " + (err && err.message || err), "danger");
     }
+  }
+
+  function legacyRafaProviderPayload(now) {
+    const tracker = Object.assign({}, cfg.tracker || {}, settings.tracker || {}, {
+      platformUrl: $("trackerPlatform") ? $("trackerPlatform").value.trim() : "",
+      endpoint: $("trackerEndpoint") ? $("trackerEndpoint").value.trim() : "",
+      socketUrl: $("trackerSocket") ? $("trackerSocket").value.trim() : "",
+      token: $("trackerToken") ? $("trackerToken").value.trim() : "",
+      tokenHeader: $("trackerHeader") ? $("trackerHeader").value.trim() || "Authorization" : "Authorization",
+      tokenPrefix: $("trackerPrefix") ? $("trackerPrefix").value : "Bearer ",
+      pollingMs: $("trackerPolling") ? Number($("trackerPolling").value || 30000) : 30000,
+      vehicles: currentVehicles()
+    });
+    return {
+      name: "RAFA Rastreamento",
+      providerType: "rafa",
+      active: !!(tracker.endpoint && tracker.token),
+      priority: 1,
+      platformUrl: tracker.platformUrl || "",
+      endpoint: tracker.endpoint || "",
+      socketUrl: tracker.socketUrl || "",
+      token: tracker.token || "",
+      tokenHeader: tracker.tokenHeader || "Authorization",
+      tokenPrefix: tracker.tokenPrefix == null ? "Bearer " : tracker.tokenPrefix,
+      pollingMs: Number(tracker.pollingMs || 30000),
+      timeoutMs: 15000,
+      notes: "Provedor RAFA preservado a partir da configuração legada.",
+      vehicles: tracker.vehicles || {},
+      updatedAt: now,
+      updatedBy: auth.currentUser && auth.currentUser.uid || ""
+    };
+  }
+
+  async function ensureLegacyRafaProvider(now) {
+    const payload = legacyRafaProviderPayload(now || new Date().toISOString());
+    if (!payload.endpoint && !payload.token) return;
+    await db.collection("trackerProviders").doc("rafa").set(Object.assign({
+      createdAt: now || new Date().toISOString(),
+      createdBy: auth.currentUser && auth.currentUser.uid || ""
+    }, payload), { merge: true });
+  }
+
+  function providerPayloadFromForm() {
+    const now = new Date().toISOString();
+    return {
+      name: $("trackerProviderName").value.trim(),
+      providerType: $("trackerProviderType").value || "custom_api",
+      active: $("trackerProviderActive").value === "true",
+      priority: Number($("trackerProviderPriority").value || 50),
+      endpoint: $("trackerProviderEndpoint").value.trim(),
+      socketUrl: $("trackerProviderSocket").value.trim(),
+      token: $("trackerProviderToken").value.trim(),
+      tokenHeader: $("trackerProviderHeader").value.trim() || "Authorization",
+      tokenPrefix: $("trackerProviderPrefix").value,
+      pollingMs: Number($("trackerProviderPolling").value || 30000),
+      timeoutMs: Number($("trackerProviderTimeout").value || 15000),
+      notes: $("trackerProviderNotes").value.trim(),
+      updatedAt: now,
+      updatedBy: auth.currentUser && auth.currentUser.uid || ""
+    };
+  }
+
+  function providerDocId(payload) {
+    const base = String(payload.name || payload.providerType || "rastreador").toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return (base || "rastreador") + "-" + String(payload.providerType || "custom").slice(0, 12);
+  }
+
+  function resetProviderForm() {
+    if ($("trackerProviderForm")) $("trackerProviderForm").reset();
+    if ($("trackerProviderEditId")) $("trackerProviderEditId").value = "";
+    if ($("trackerProviderHeader")) $("trackerProviderHeader").value = "Authorization";
+    if ($("trackerProviderPrefix")) $("trackerProviderPrefix").value = "Bearer ";
+    if ($("trackerProviderPriority")) $("trackerProviderPriority").value = "50";
+    if ($("trackerProviderPolling")) $("trackerProviderPolling").value = "30000";
+    if ($("trackerProviderTimeout")) $("trackerProviderTimeout").value = "15000";
+    if ($("trackerProviderCancelEdit")) $("trackerProviderCancelEdit").classList.add("hidden");
+  }
+
+  function renderTrackerProviders() {
+    const box = $("trackerProvidersList");
+    if (!box) return;
+    const rows = Object.values(trackerProviders || {}).sort((a, b) => Number(a.priority || 50) - Number(b.priority || 50));
+    box.innerHTML = rows.length ? rows.map((p) => {
+      const status = p.active !== false ? "Ativo" : "Inativo";
+      const located = Number(p.lastLocatedCount || 0);
+      return `<div class="tracker-provider-card col-4">
+        <b>${esc(p.name || p.id)}</b><br>
+        <span class="badge ${p.active !== false ? "ok" : "muted"}">${esc(status)}</span>
+        <span class="badge info">${esc(p.providerType || "custom_api")}</span>
+        <p class="small">Prioridade ${esc(p.priority || 50)}<br>Última sincronização: ${esc(p.lastSyncAt || "nunca")}<br>Veículos localizados: ${located}<br>${p.lastError ? "Erro: " + esc(p.lastError) : "Erro: nenhum"}</p>
+        <div class="actions">
+          <button class="btn" type="button" onclick="JM.superadmin.editTrackerProvider('${esc(p.id)}')">Editar</button>
+          <button class="btn" type="button" onclick="JM.superadmin.testTrackerProvider('${esc(p.id)}')">Testar</button>
+          <button class="btn warn" type="button" onclick="JM.superadmin.toggleTrackerProvider('${esc(p.id)}')">${p.active !== false ? "Desativar" : "Ativar"}</button>
+        </div>
+      </div>`;
+    }).join("") : `<p class="muted small">Nenhum rastreador adicional cadastrado. O RAFA legado continua funcionando pela configuração Tracker.</p>`;
+  }
+
+  async function testProviderConfig(provider, feedbackId) {
+    const feedback = feedbackId ? $(feedbackId) : $("trackerProviderTestResult");
+    if (feedback) feedback.textContent = "Testando conexão do rastreador...";
+    if (!provider || !provider.endpoint) {
+      const msg = "Endpoint não configurado. O provedor pode ficar cadastrado, mas não será sincronizado.";
+      if (feedback) feedback.textContent = msg;
+      toast(msg, "warn");
+      return [];
+    }
+    if (!provider.token && !["manual", "mobile_gps"].includes(provider.providerType)) {
+      const msg = "Token/API key não informado. Verifique autenticação antes de ativar o provedor.";
+      if (feedback) feedback.textContent = msg;
+      toast(msg, "warn");
+      return [];
+    }
+    const positions = await window.JM.tracker.fetchTrackerPositions(provider);
+    const msg = `Conexão concluída. ${positions.length} posição(ões) recebida(s).`;
+    if (feedback) feedback.textContent = msg;
+    toast(msg, positions.length ? "ok" : "warn");
+    return positions;
   }
 
   $("companyForm").onsubmit = async (e) => {
@@ -213,6 +345,7 @@
       },
       updatedAt: new Date().toISOString()
     }, { merge: true });
+    await ensureLegacyRafaProvider(new Date().toISOString());
     toast("Tracker salvo. O mapa do jm.html usará posições reais na próxima sincronização.", "ok");
   };
 
@@ -282,6 +415,34 @@
     }, { merge: true });
     toast(enabled ? "Módulo GPS por celular ativado." : "Módulo GPS por celular desativado. Painéis irão ocultar esta função.", enabled ? "ok" : "warn");
   };
+
+  if ($("trackerProviderForm")) $("trackerProviderForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const payload = providerPayloadFromForm();
+    if (!payload.name) return toast("Informe o nome do provedor.", "danger");
+    if (payload.active && !payload.endpoint && !["manual", "mobile_gps"].includes(payload.providerType)) {
+      return toast("Para ativar este rastreador, informe o endpoint real da API.", "danger");
+    }
+    const id = $("trackerProviderEditId").value || providerDocId(payload);
+    await db.collection("trackerProviders").doc(id).set(Object.assign({
+      createdAt: new Date().toISOString(),
+      createdBy: auth.currentUser && auth.currentUser.uid || ""
+    }, payload), { merge: true });
+    resetProviderForm();
+    toast("Rastreador salvo.", "ok");
+  };
+
+  if ($("trackerProviderTestBtn")) $("trackerProviderTestBtn").onclick = async () => {
+    try {
+      await testProviderConfig(providerPayloadFromForm(), "trackerProviderTestResult");
+    } catch (err) {
+      const msg = "Não consegui conectar ao rastreador. Verifique endpoint, token e CORS. O sistema continuará usando RAFA/GPS celular se disponível. Detalhe: " + (err && err.message || err);
+      if ($("trackerProviderTestResult")) $("trackerProviderTestResult").textContent = msg;
+      toast(msg, "danger");
+    }
+  };
+
+  if ($("trackerProviderCancelEdit")) $("trackerProviderCancelEdit").onclick = resetProviderForm;
 
   function normalizedRole(role) {
     return String(role || "").toLowerCase().trim();
@@ -376,5 +537,57 @@
     window.JM.utils.setupCollapsiblePanels(document, { collapseOnMobile: true, openFirst: 2 });
     setTimeout(() => window.JM.utils.setupCollapsiblePanels(document, { collapseOnMobile: true, openFirst: 2 }), 250);
   }
+
+  window.JM.superadmin = {
+    editTrackerProvider(id) {
+      const p = trackerProviders[id];
+      if (!p) return toast("Rastreador não encontrado.", "danger");
+      $("trackerProviderEditId").value = id;
+      $("trackerProviderName").value = p.name || "";
+      $("trackerProviderType").value = p.providerType || "custom_api";
+      $("trackerProviderActive").value = String(p.active !== false);
+      $("trackerProviderPriority").value = p.priority || 50;
+      $("trackerProviderEndpoint").value = p.endpoint || "";
+      $("trackerProviderSocket").value = p.socketUrl || "";
+      $("trackerProviderHeader").value = p.tokenHeader || "Authorization";
+      $("trackerProviderPrefix").value = p.tokenPrefix == null ? "Bearer " : p.tokenPrefix;
+      $("trackerProviderToken").value = p.token || "";
+      $("trackerProviderPolling").value = p.pollingMs || 30000;
+      $("trackerProviderTimeout").value = p.timeoutMs || 15000;
+      $("trackerProviderNotes").value = p.notes || "";
+      if ($("trackerProviderCancelEdit")) $("trackerProviderCancelEdit").classList.remove("hidden");
+      toast("Rastreador carregado para edição.", "ok");
+    },
+    async toggleTrackerProvider(id) {
+      const p = trackerProviders[id];
+      if (!p) return toast("Rastreador não encontrado.", "danger");
+      await db.collection("trackerProviders").doc(id).set({
+        active: p.active === false,
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser && auth.currentUser.uid || ""
+      }, { merge: true });
+      toast(p.active === false ? "Rastreador ativado." : "Rastreador desativado.", "ok");
+    },
+    async testTrackerProvider(id) {
+      const p = trackerProviders[id];
+      if (!p) return toast("Rastreador não encontrado.", "danger");
+      try {
+        const positions = await testProviderConfig(p, "trackerProviderTestResult");
+        await db.collection("trackerProviders").doc(id).set({
+          lastTestAt: new Date().toISOString(),
+          lastLocatedCount: positions.length,
+          lastError: ""
+        }, { merge: true });
+      } catch (err) {
+        await db.collection("trackerProviders").doc(id).set({
+          lastTestAt: new Date().toISOString(),
+          lastError: err && err.message || String(err)
+        }, { merge: true });
+        const msg = "Não consegui conectar ao rastreador. Verifique endpoint, token e CORS. Detalhe: " + (err && err.message || err);
+        if ($("trackerProviderTestResult")) $("trackerProviderTestResult").textContent = msg;
+        toast(msg, "danger");
+      }
+    }
+  };
 
 }());

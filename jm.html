@@ -1,13 +1,13 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07111f">
   <title>JM Guinchos - Gestor</title>
-  <link rel="manifest" href="manifest.json?v=jm-v19-5-modulo-gps-celular-rtdb">
+  <link rel="manifest" href="manifest.json?v=jm-v20-entrega-final-operacional">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=jm-v19-5-modulo-gps-celular-rtdb">
+  <link rel="stylesheet" href="css/style.css?v=jm-v20-entrega-final-operacional">
 </head>
 <body>
   <section id="loginView" class="login">
@@ -313,8 +313,8 @@
           <div class="grid">
             <div class="panel col-12">
               <h2>Rastreamento e rotas</h2>
-              <p class="muted small">Mapa gratuito Leaflet/OpenStreetMap. O sistema usa o Tracker RAFA para posicionar a frota, selecionar veículo próximo e acompanhar atendimento em tempo real.</p>
-              <div class="actions" style="margin-bottom:10px"><button class="btn primary" id="btnSyncTrackerNow" type="button">Atualizar Tracker agora</button><a class="btn" target="_blank" href="https://gps2.rafacarrastreadores.com.br">Abrir plataforma RAFA</a></div>
+              <p class="muted small">Mapa gratuito Leaflet/OpenStreetMap. O sistema usa posições normalizadas dos rastreadores cadastrados, preservando RAFA e usando GPS celular como fallback quando habilitado.</p>
+              <div class="actions" style="margin-bottom:10px"><button class="btn primary" id="btnSyncTrackerNow" type="button">Atualizar rastreadores agora</button><a class="btn" target="_blank" href="https://gps2.rafacarrastreadores.com.br">Abrir plataforma RAFA</a></div>
               <div id="fleetMap" class="map"></div>
             </div>
             <div class="panel col-12">
@@ -389,7 +389,12 @@
                 <div><label>Placa</label><input id="vehiclePlate" maxlength="8" required></div>
                 <div><label>Apelido</label><input id="vehicleAlias"></div>
                 <div><label>Tipo</label><input id="vehicleType"></div>
+                <div><label>Provedor de GPS</label><select id="vehicleTrackerProvider"><option value="">RAFA/automático</option></select></div>
                 <div><label>Tracker ID / deviceId</label><input id="vehicleTrackerId" placeholder="81 ou uniqueId"></div>
+                <div><label>External ID</label><input id="vehicleTrackerExternalId" placeholder="ID externo no provedor"></div>
+                <div><label>IMEI</label><input id="vehicleTrackerImei" inputmode="numeric" placeholder="IMEI do rastreador"></div>
+                <div><label>Placa no provedor</label><input id="vehicleTrackerPlate" placeholder="ABC1D23"></div>
+                <div><label>Rastreamento ativo</label><select id="vehicleTrackerEnabled"><option value="true">Sim</option><option value="false">Não</option></select></div>
                 <div><label>Status</label><select id="vehicleStatus"><option>Disponível</option><option>Em atendimento</option><option>Manutenção</option><option>Indisponível</option></select></div>
                 <button class="btn primary wide" type="submit">Salvar veículo</button>
               </form>
@@ -446,17 +451,17 @@
   <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
   <div id="toast" class="toast"></div>
 
-  <script src="js/config.firebase.js?v=jm-v19-5-modulo-gps-celular-rtdb"></script>
+  <script src="js/config.firebase.js?v=jm-v20-entrega-final-operacional"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
-  <script src="js/utils.js?v=jm-v19-5-modulo-gps-celular-rtdb"></script>
-  <script src="js/firebase.js?v=jm-v19-5-modulo-gps-celular-rtdb"></script>
-  <script src="js/tracker.js?v=jm-v19-5-modulo-gps-celular-rtdb"></script>
-  <script src="js/google-maps.js?v=jm-v19-5-modulo-gps-celular-rtdb"></script>
-  <script src="js/mapa.js?v=jm-v19-5-modulo-gps-celular-rtdb"></script>
-  <script src="js/app.js?v=jm-v19-5-modulo-gps-celular-rtdb"></script>
+  <script src="js/utils.js?v=jm-v20-entrega-final-operacional"></script>
+  <script src="js/firebase.js?v=jm-v20-entrega-final-operacional"></script>
+  <script src="js/tracker.js?v=jm-v20-entrega-final-operacional"></script>
+  <script src="js/google-maps.js?v=jm-v20-entrega-final-operacional"></script>
+  <script src="js/mapa.js?v=jm-v20-entrega-final-operacional"></script>
+  <script src="js/app.js?v=jm-v20-entrega-final-operacional"></script>
 </body>
 </html>
 

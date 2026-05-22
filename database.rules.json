@@ -7,11 +7,13 @@
       ".write": "auth != null",
       "vehicles": {
         "$vehicleId": {
+          ".write": "auth != null && newData.child('driverId').val() == auth.uid",
           ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId'])"
         }
       },
       "calls": {
         "$callId": {
+          ".write": "auth != null && newData.child('driverId').val() == auth.uid && newData.child('callId').val() == $callId",
           ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId','callId'])"
         }
       },

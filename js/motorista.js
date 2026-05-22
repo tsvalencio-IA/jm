@@ -4,7 +4,7 @@
   const { $, esc, parseMoney, toast, statusClass, routeKm, mapsRouteUrl, statusKey, statusLabel, isFinalStatus, setupCollapsiblePanels } = window.JM.utils;
   const { auth, db, arrayUnion, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
-  const DRIVER_FLOW_VERSION = "jm-v19-5-modulo-gps-celular-rtdb";
+  const DRIVER_FLOW_VERSION = "jm-v20-entrega-final-operacional";
   const state = { user: null, profile: null, calls: {}, vehicles: {}, expenses: {}, settings: {} };
   const unsubscribers = [];
   let driverLocationWatchId = null;
@@ -124,6 +124,56 @@
     if (missingPhotos === 0 && hasCompleteChecklist(call) && hasSignature(call)) return "completo";
     if (proofPhotos(call).length || call.proofChecklist || call.customerSignature) return "parcial";
     return "pendente";
+  }
+
+  function publicStatusLabel(callOrStatus) {
+    const key = statusKey(callOrStatus);
+    const labels = {
+      aguardando_despacho: "Atendimento recebido",
+      despachado: "Guincho em preparação",
+      motorista_a_caminho: "Motorista a caminho",
+      motorista_no_local: "Motorista chegou ao local",
+      veiculo_carregado: "Veículo carregado",
+      em_transporte: "Veículo em remoção/transporte",
+      entregue: "Veículo entregue",
+      finalizado: "Atendimento finalizado",
+      cancelado: "Atendimento cancelado"
+    };
+    return labels[key] || "Atendimento recebido";
+  }
+
+  async function syncPublicCallFromDriver(call, extra) {
+    const merged = Object.assign({}, call || {});
+    Object.entries(extra || {}).forEach(([key, value]) => {
+      if (key === "timeline" && !Array.isArray(value)) return;
+      merged[key] = value;
+    });
+    call = merged;
+    if (!call.publicToken || call.publicRevoked) return;
+    const photos = call.publicProofsEnabled ? (Array.isArray(call.proofPhotos) ? call.proofPhotos : []).filter((p) => p && p.cloudinaryUrl).map((p) => ({
+      label: p.label || p.type || "Foto",
+      url: p.cloudinaryUrl,
+      type: p.type || "",
+      uploadedAt: p.uploadedAt || ""
+    })) : [];
+    await db.collection("publicCalls").doc(call.publicToken).set({
+      publicToken: call.publicToken,
+      callId: call.id,
+      companyName: "JM Guinchos",
+      statusPublic: publicStatusLabel(call.statusKey || call.status),
+      statusKey: statusKey(call.statusKey || call.status),
+      serviceType: call.serviceType || call.tipo || "Guincho",
+      clientNameMasked: call.cliente || call.customerName || "Cliente",
+      vehiclePlateMasked: call.customerPlate || "",
+      customerVehicle: call.customerVehicle || "",
+      timelinePublic: Array.isArray(call.timeline) ? call.timeline.slice(-20) : [],
+      proofsPublic: photos,
+      reportEnabled: call.publicReportEnabled !== false,
+      chatEnabled: call.publicChatEnabled !== false,
+      paymentNegotiationEnabled: call.publicPaymentNegotiationEnabled === true,
+      updatedAt: new Date().toISOString(),
+      revoked: false
+    }, { merge: true });
   }
 
   function proofBadge(call) {
@@ -678,17 +728,17 @@
     const call = callId && state.calls[callId];
     if (!call) return toast("Selecione um chamado ativo para enviar a localizacao do celular.", "danger");
     if ($("driverLocationCall")) $("driverLocationCall").value = callId;
-    stopDriverPhoneLocation();
-    setDriverLocationStatus("Solicitando permissao de localizacao do celular...", "warn");
+    await stopDriverPhoneLocation();
+    setDriverLocationStatus("Solicitando permissão de localização do celular...", "warn");
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
         await saveDriverLocationPoint(callId, pos, { force: true });
         toast("Localização do celular enviada para a central.", "ok");
       } catch (err) {
-        setDriverLocationStatus("Falha ao salvar localizacao no Firestore: " + (err && err.message || "permissao negada"), "danger");
+        setDriverLocationStatus("Falha ao salvar localização do celular: " + (err && err.message || "permissão negada"), "danger");
       }
     }, (err) => {
-      setDriverLocationStatus("Autorize a localizacao do celular no navegador. Detalhe: " + err.message, "danger");
+      setDriverLocationStatus("Autorize a localização do celular no navegador. Detalhe: " + err.message, "danger");
     }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
     driverLocationWatchId = navigator.geolocation.watchPosition(async (pos) => {
       try {
@@ -697,7 +747,7 @@
         setDriverLocationStatus("Falha ao enviar localização: " + (err && err.message || "permissão negada"), "danger");
       }
     }, (err) => {
-      setDriverLocationStatus("GPS em espera: autorize localizacao ou aguarde sinal melhor. Detalhe: " + err.message, "danger");
+      setDriverLocationStatus("GPS em espera: autorize localização ou aguarde sinal melhor. Detalhe: " + err.message, "danger");
     }, { enableHighAccuracy: true, timeout: 30000, maximumAge: 15000 });
   }
 
@@ -709,7 +759,7 @@
     if (key === "finalizado" && !["completo", "revisado"].includes(call.proofStatus || proofStatusFor(call))) {
       return toast("Antes de finalizar, salve checklist, fotos obrigatórias e assinatura/aceite do cliente em Provas do atendimento.", "danger");
     }
-    await db.collection("calls").doc(id).update({
+    const updates = {
       status: label,
       statusKey: key,
       closedAt: key === "finalizado" ? new Date().toISOString() : call.closedAt || "",
@@ -719,7 +769,9 @@
       phoneLocationActive: key === "finalizado" ? false : call.phoneLocationActive || false,
       updatedAt: new Date().toISOString(),
       timeline: arrayUnion({ at: new Date().toISOString(), by: state.profile.nome || state.user.email, text: "Motorista alterou status para " + label })
-    });
+    };
+    await db.collection("calls").doc(id).update(updates);
+    await syncPublicCallFromDriver(call, updates).catch((err) => console.warn("Falha ao atualizar espelho público", err));
     if (key === "finalizado") stopDriverPhoneLocation();
     toast("Chamado atualizado.", "ok");
   }
@@ -949,7 +1001,7 @@
       const missingAfterUpload = requiredPhotos.filter((photo) => !proofPhotosMerged.some((saved) => saved && saved.type === photo.key && saved.cloudinaryUrl));
       const nextProofStatus = (!signatureMissing && missingAfterUpload.length === 0 && hasCompleteChecklist(nextCall)) ? "completo" : "parcial";
       setProofSubmitStatus("Salvando provas no chamado...", "info", false);
-      await db.collection("calls").doc(callId).set({
+      const callUpdates = {
         proofChecklist: checklist,
         proofPhotos: proofPhotosMerged,
         customerSignature,
@@ -960,7 +1012,9 @@
         billingStatus: nextProofStatus === "completo" && call.billingStatus === "aguardando_provas" ? "a_faturar" : call.billingStatus || "aberto",
         timeline: arrayUnion({ at: new Date().toISOString(), by: state.profile.nome || state.user.email, text: "Motorista salvou checklist, fotos e assinatura do cliente" }),
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      };
+      await db.collection("calls").doc(callId).set(callUpdates, { merge: true });
+      await syncPublicCallFromDriver(call, callUpdates).catch((err) => console.warn("Falha ao atualizar espelho público", err));
 
       let auditWarning = "";
       try {
@@ -1017,4 +1071,3 @@
   }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js?v=" + DRIVER_FLOW_VERSION).catch(() => {});
 }());
-

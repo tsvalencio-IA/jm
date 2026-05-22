@@ -1,4 +1,4 @@
-# JM Guinchos V19.5 - Módulo GPS celular opcional + Realtime Database
+﻿# JM Guinchos V19.5 - Módulo GPS celular opcional + Realtime Database
 
 Correção focada em separar o GPS do celular do fluxo principal de chamados para evitar piscar/travar o painel motorista.
 
@@ -38,6 +38,7 @@ Correção focada em separar o GPS do celular do fluxo principal de chamados par
 
 Abrir:
 
-- jm.html?v=jm-v19-5-modulo-gps-celular-rtdb
-- motorista.html?v=jm-v19-5-modulo-gps-celular-rtdb
-- superadmin.html?v=jm-v19-5-modulo-gps-celular-rtdb
+- jm.html?v=jm-v20-entrega-final-operacional
+- motorista.html?v=jm-v20-entrega-final-operacional
+- superadmin.html?v=jm-v20-entrega-final-operacional
+

@@ -1,0 +1,100 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JM Guinchos - Relatório de Provas</title>
+  <link rel="stylesheet" href="css/style.css?v=jm-v20-entrega-final-operacional">
+  <style>
+    body { background:#f8fafc; color:#0f172a; }
+    .report-page { max-width: 980px; margin: 0 auto; padding: 24px; }
+    .report-card { background:#fff; border:1px solid #dbe3ef; border-radius:10px; padding:20px; margin-bottom:14px; }
+    .report-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
+    .report-photo { break-inside: avoid; border:1px solid #dbe3ef; border-radius:8px; overflow:hidden; background:#fff; }
+    .report-photo img { width:100%; display:block; }
+    .report-photo span { display:block; padding:8px; color:#475569; }
+    .print-actions { position: sticky; top: 0; background:#f8fafc; padding:10px 0; z-index: 5; }
+    @media print {
+      .print-actions { display:none; }
+      body { background:#fff; }
+      .report-page { padding:0; }
+      .report-card { border:0; border-bottom:1px solid #dbe3ef; border-radius:0; }
+      .signature-footer { position: fixed; bottom: 8px; left:0; right:0; }
+    }
+    @media (max-width: 760px) { .report-grid { grid-template-columns:1fr; } .report-page { padding:12px; } }
+  </style>
+</head>
+<body>
+  <main class="report-page">
+    <div class="print-actions actions">
+      <button class="btn primary" onclick="window.print()">Imprimir / salvar PDF</button>
+      <a class="btn" href="jm.html">Voltar ao painel</a>
+    </div>
+    <section class="report-card">
+      <h1>Relatório de atendimento</h1>
+      <p class="muted">JM Guinchos</p>
+      <div id="reportStatus" class="badge info">Carregando...</div>
+    </section>
+    <section class="report-card">
+      <h2>Dados do chamado</h2>
+      <div id="reportDetails" class="report-grid"></div>
+    </section>
+    <section class="report-card">
+      <h2>Linha do tempo</h2>
+      <div id="reportTimeline"></div>
+    </section>
+    <section class="report-card">
+      <h2>Fotos e provas</h2>
+      <div id="reportProofs" class="report-grid"></div>
+    </section>
+  </main>
+  <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
+
+  <script src="js/config.firebase.js?v=jm-v20-entrega-final-operacional"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="js/utils.js?v=jm-v20-entrega-final-operacional"></script>
+  <script>
+    (function () {
+      "use strict";
+      const utils = window.JM && window.JM.utils || {};
+      const esc = utils.esc || ((v) => String(v == null ? "" : v));
+      const dateTime = utils.dateTime || ((v) => v || "");
+      const token = new URLSearchParams(location.search).get("t") || "";
+      const cfg = window.JM_CONFIG && window.JM_CONFIG.firebaseConfig || window.JM_CONFIG && window.JM_CONFIG.firebase || {};
+      firebase.initializeApp(cfg);
+      const db = firebase.firestore();
+      if (!/^[a-f0-9]{24,80}$/i.test(token)) {
+        document.getElementById("reportStatus").textContent = "Token inválido";
+        return;
+      }
+      db.collection("publicCalls").doc(token).get().then((snap) => {
+        if (!snap.exists || snap.data().revoked) {
+          document.getElementById("reportStatus").textContent = "Relatório indisponível";
+          return;
+        }
+        const data = snap.data();
+        document.getElementById("reportStatus").textContent = data.statusPublic || "Atendimento";
+        document.getElementById("reportDetails").innerHTML = [
+          ["Status", data.statusPublic],
+          ["Serviço", data.serviceType],
+          ["Cliente", data.clientNameMasked],
+          ["Placa/veículo", data.vehiclePlateMasked || data.customerVehicle],
+          ["Origem", data.originLabel || "Protegido"],
+          ["Destino", data.destinationLabel || "Protegido"],
+          ["Motorista", data.driverName || "A definir"],
+          ["Veículo da frota", data.fleetVehicle || ""],
+          ["Gerado em", new Date().toLocaleString("pt-BR")]
+        ].map((row) => `<div><b>${esc(row[0])}</b><br>${esc(row[1] || "-")}</div>`).join("");
+        const timeline = Array.isArray(data.timelinePublic) ? data.timelinePublic : [];
+        document.getElementById("reportTimeline").innerHTML = timeline.length ? timeline.map((row) => `<p><b>${esc(row.status || "Atualização")}</b><br>${esc(row.text || "")}<br><small>${dateTime(row.at)}</small></p>`).join("") : "<p>Sem linha do tempo pública.</p>";
+        const proofs = Array.isArray(data.proofsPublic) ? data.proofsPublic : [];
+        document.getElementById("reportProofs").innerHTML = proofs.length ? proofs.map((p) => `<div class="report-photo"><img src="${esc(p.url)}" alt="${esc(p.label || "Prova")}"><span>${esc(p.label || "Prova")}</span></div>`).join("") : "<p>Sem fotos liberadas para este relatório.</p>";
+      }).catch((err) => {
+        document.getElementById("reportStatus").textContent = "Falha ao abrir relatório: " + (err && err.message || err);
+      });
+    }());
+  </script>
+</body>
+</html>
+
