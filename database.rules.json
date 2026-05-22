@@ -1,0 +1,26 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "mobileGps": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "vehicles": {
+        "$vehicleId": {
+          ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId'])"
+        }
+      },
+      "calls": {
+        "$callId": {
+          ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId','callId'])"
+        }
+      },
+      "drivers": {
+        "$driverId": {
+          ".write": "auth != null && auth.uid == $driverId",
+          ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId'])"
+        }
+      }
+    }
+  }
+}
