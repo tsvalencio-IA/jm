@@ -4,23 +4,22 @@
     ".write": false,
     "mobileGps": {
       ".read": "auth != null",
-      ".write": "auth != null",
       "vehicles": {
         "$vehicleId": {
-          ".write": "auth != null && newData.child('driverId').val() == auth.uid",
-          ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId'])"
+          ".write": "auth != null && newData.hasChildren(['lat','lng','driverId','vehicleId','updatedAt']) && newData.child('driverId').val() == auth.uid && newData.child('vehicleId').val() == $vehicleId",
+          ".validate": "newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('driverId').isString() && newData.child('vehicleId').isString() && newData.child('updatedAt').isString()"
         }
       },
       "calls": {
         "$callId": {
-          ".write": "auth != null && newData.child('driverId').val() == auth.uid && newData.child('callId').val() == $callId",
-          ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId','callId'])"
+          ".write": "auth != null && newData.hasChildren(['lat','lng','driverId','callId','updatedAt']) && newData.child('driverId').val() == auth.uid && newData.child('callId').val() == $callId",
+          ".validate": "newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('driverId').isString() && newData.child('callId').isString() && newData.child('updatedAt').isString()"
         }
       },
       "drivers": {
         "$driverId": {
           ".write": "auth != null && auth.uid == $driverId",
-          ".validate": "newData.hasChildren(['lat','lng','capturedAt','driverId'])"
+          ".validate": "newData.hasChildren(['lat','lng','driverId','updatedAt']) && newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('driverId').val() == auth.uid && newData.child('updatedAt').isString()"
         }
       }
     }

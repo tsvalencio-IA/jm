@@ -4,7 +4,7 @@
   const { $, esc, parseMoney, toast, statusClass, routeKm, mapsRouteUrl, statusKey, statusLabel, isFinalStatus, setupCollapsiblePanels } = window.JM.utils;
   const { auth, db, arrayUnion, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
-  const DRIVER_FLOW_VERSION = "jm-v20-entrega-final-operacional";
+  const DRIVER_FLOW_VERSION = "jm-v20-gps-celular-duplo";
   const state = { user: null, profile: null, calls: {}, vehicles: {}, expenses: {}, settings: {} };
   const unsubscribers = [];
   let driverLocationWatchId = null;
@@ -546,12 +546,14 @@
         </div>
         <p class="small"><b>Origem:</b> ${esc(call.origem?.label || call.originLabel || "-")}<br><b>Destino:</b> ${esc(call.destino?.label || call.destLabel || "-")}<br><b>Rota:</b> ${esc(metric)} ${routeBadge} ${proof}<br><b>Acionamento:</b> ${esc(call.source || "Particular")}${call.insurance ? " · " + esc(call.insurance) : ""}${call.insuranceProtocol ? " · Prot. " + esc(call.insuranceProtocol) : ""}<br><b>Veículo cliente:</b> ${esc(call.customerPlate || "-")} ${call.customerVehicle ? "· " + esc(call.customerVehicle) : ""}</p>
         <div class="actions">
-          ${url ? `<a class="btn good" target="_blank" href="${esc(url)}">Abrir rota no Maps</a>` : ""}
-          <button class="btn primary" onclick="JM.motorista.setStatus('${esc(call.id)}','motorista_a_caminho')">A caminho</button>
+          <button class="btn primary" onclick="JM.motorista.acceptCall('${esc(call.id)}')">Aceitar chamado</button>
+          <button class="btn primary" onclick="JM.motorista.setStatus('${esc(call.id)}','motorista_a_caminho')">Iniciar chamado</button>
+          <button class="btn good" onclick="JM.motorista.openRouteForCall('${esc(call.id)}')">Ver rota</button>
+          <button class="btn good" onclick="JM.motorista.startRouteForCall('${esc(call.id)}')">Iniciar rota</button>
           <button class="btn" onclick="JM.motorista.setStatus('${esc(call.id)}','motorista_no_local')">No local</button>
           <button class="btn" onclick="JM.motorista.setStatus('${esc(call.id)}','veiculo_carregado')">Carregado</button>
           <button class="btn" onclick="JM.motorista.setStatus('${esc(call.id)}','entregue')">Entregue</button>
-          ${isMobileGpsEnabled() ? `<button class="btn warn" data-mobile-gps-only onclick="JM.motorista.startLocationForCall('${esc(call.id)}')">Ativar GPS deste chamado</button>` : ""}
+          ${isMobileGpsEnabled() ? `<button class="btn warn" data-mobile-gps-only onclick="JM.motorista.startLocationForCall('${esc(call.id)}')">Ligar GPS do celular</button>` : ""}
           <button class="btn good" onclick="JM.motorista.setStatus('${esc(call.id)}','finalizado')">Finalizar</button>
         </div>
       </div>`;
@@ -579,6 +581,35 @@
 
     lastSelectSignature = sig;
     syncDriverExpenseContext();
+  }
+
+  function callRouteUrl(call) {
+    if (!call) return "";
+    const vehicle = state.vehicles[call.vehicleId] || {};
+    return call.routeExternalUrl || call.routeUrl || mapsRouteUrl(call, vehicle) || "";
+  }
+
+  function openRouteForCall(id) {
+    const call = state.calls[id];
+    if (!call) return toast("Chamado não encontrado para abrir rota.", "danger");
+    const url = callRouteUrl(call);
+    if (!url) return toast("Este chamado ainda não tem origem/destino suficientes para abrir rota.", "danger");
+    window.open(url, "_blank", "noopener");
+    toast("Rota aberta no aplicativo de mapas.", "ok");
+  }
+
+  async function acceptCall(id) {
+    await setStatus(id, "despachado");
+    toast("Chamado aceito. Inicie a rota quando estiver pronto para deslocar.", "ok");
+  }
+
+  async function startRouteForCall(id) {
+    const call = state.calls[id];
+    if (!call) return toast("Chamado não encontrado para iniciar rota.", "danger");
+    const url = callRouteUrl(call);
+    if (url) window.open(url, "_blank", "noopener");
+    await setStatus(id, "motorista_a_caminho");
+    if (!url) toast("Chamado iniciado, mas a rota ainda precisa de origem/destino válidos.", "warn");
   }
 
   function setDriverLocationStatus(message, type) {
@@ -626,6 +657,8 @@
     }
     const call = state.calls[callId] || {};
     const vehicleId = call.vehicleId || call.vehicle || call.truckId || "";
+    const rtdbCallId = rtdbKey(callId);
+    const rtdbVehicleId = vehicleId ? rtdbKey(vehicleId) : "";
     const point = {
       lat: Number(pos.coords.latitude),
       lng: Number(pos.coords.longitude),
@@ -656,15 +689,17 @@
         capturedAt: point.capturedAt,
         updatedAt: point.capturedAt,
         active: true,
-        callId,
-        vehicleId,
+        callId: rtdbCallId,
+        rawCallId: callId,
+        vehicleId: rtdbVehicleId,
+        rawVehicleId: vehicleId,
         driverId: state.user.uid,
         driverName: state.profile.nome || state.user.email,
         driverEmail: state.user.email || ""
       };
       const updates = {};
-      updates["mobileGps/calls/" + rtdbKey(callId)] = payload;
-      if (vehicleId) updates["mobileGps/vehicles/" + rtdbKey(vehicleId)] = payload;
+      updates["mobileGps/calls/" + rtdbCallId] = payload;
+      if (rtdbVehicleId) updates["mobileGps/vehicles/" + rtdbVehicleId] = payload;
       updates["mobileGps/drivers/" + rtdbKey(state.user.uid)] = payload;
       await rtdb.ref().update(updates);
       if (options.force) {
@@ -1061,7 +1096,7 @@
   });
 
   window.JM = window.JM || {};
-  window.JM.motorista = { setStatus, startLocationForCall: startDriverPhoneLocation, stopDriverPhoneLocation, state };
+  window.JM.motorista = { setStatus, acceptCall, openRouteForCall, startRouteForCall, startLocationForCall: startDriverPhoneLocation, stopDriverPhoneLocation, state };
   setupSignaturePad();
   applyMobileGpsVisibility();
   if (typeof setupCollapsiblePanels === "function") {

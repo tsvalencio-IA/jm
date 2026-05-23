@@ -1,4 +1,4 @@
-const CACHE_NAME = "jm-v20-entrega-final-operacional";
+const CACHE_NAME = "jm-v20-gps-celular-duplo";
 const ASSETS = [
   "./",
   "./index.html",
