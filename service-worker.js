@@ -1,4 +1,4 @@
-const CACHE_NAME = "jm-v20-gps-celular-duplo";
+const CACHE_NAME = "jm-v20-1-gps-rtdb-auth-fix";
 const ASSETS = [
   "./",
   "./index.html",

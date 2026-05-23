@@ -10,7 +10,7 @@
   const { auth, secondaryAuth, db, ts, arrayUnion, emailIsAdmin, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
   const SYSTEM_SIGNATURE = "Powered by thIAguinho Soluções Digitais";
-  const LOGIN_FLOW_VERSION = "jm-v20-gps-celular-duplo";
+  const LOGIN_FLOW_VERSION = "jm-v20-1-gps-rtdb-auth-fix";
   let trackerTimer = null;
   let trackerBusy = false;
   let mapRefreshTimer = null;

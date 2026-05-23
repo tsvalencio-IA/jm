@@ -2,9 +2,9 @@
   "use strict";
 
   const { $, esc, parseMoney, toast, statusClass, routeKm, mapsRouteUrl, statusKey, statusLabel, isFinalStatus, setupCollapsiblePanels } = window.JM.utils;
-  const { auth, db, arrayUnion, getRealtimeDb, rtdbKey } = window.JM.firebase;
+  const { auth, db, arrayUnion, getRealtimeDb, rtdbKey, rtdbRestUpdate } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
-  const DRIVER_FLOW_VERSION = "jm-v20-gps-celular-duplo";
+  const DRIVER_FLOW_VERSION = "jm-v20-1-gps-rtdb-auth-fix";
   const state = { user: null, profile: null, calls: {}, vehicles: {}, expenses: {}, settings: {} };
   const unsubscribers = [];
   let driverLocationWatchId = null;
@@ -517,7 +517,7 @@
   $("driverLogoutBtn").onclick = () => auth.signOut();
   $("driverRefreshBtn").onclick = () => render("manual");
   if ($("driverExpenseCall")) $("driverExpenseCall").onchange = syncDriverExpenseContext;
-  if ($("driverStartLocationBtn")) $("driverStartLocationBtn").onclick = startDriverPhoneLocation;
+  if ($("driverStartLocationBtn")) $("driverStartLocationBtn").onclick = () => startDriverPhoneLocation();
   if ($("driverStopLocationBtn")) $("driverStopLocationBtn").onclick = stopDriverPhoneLocation;
 
   function activeCalls() {
@@ -638,7 +638,12 @@
           if (callId) updates["mobileGps/calls/" + rtdbKey(callId) + "/active"] = false;
           if (vehicleId) updates["mobileGps/vehicles/" + rtdbKey(vehicleId) + "/active"] = false;
           updates["mobileGps/drivers/" + rtdbKey(state.user && state.user.uid || "driver") + "/active"] = false;
-          await rtdb.ref().update(updates);
+          try {
+            await rtdb.ref().update(updates);
+          } catch (err) {
+            if (rtdbRestUpdate) await rtdbRestUpdate(gps.databaseURL, updates).catch(() => {});
+            else throw err;
+          }
         }
       }
     } catch (err) {
@@ -701,7 +706,14 @@
       updates["mobileGps/calls/" + rtdbCallId] = payload;
       if (rtdbVehicleId) updates["mobileGps/vehicles/" + rtdbVehicleId] = payload;
       updates["mobileGps/drivers/" + rtdbKey(state.user.uid)] = payload;
-      await rtdb.ref().update(updates);
+      try {
+        await rtdb.ref().update(updates);
+      } catch (err) {
+        // Fallback real: se o SDK estiver em app secundário sem Auth, grava via REST com o ID token do Auth atual.
+        const code = err && (err.code || err.message) || "";
+        if (!/permission|PERMISSION_DENIED|denied/i.test(String(code)) || !rtdbRestUpdate) throw err;
+        await rtdbRestUpdate(gps.databaseURL, updates);
+      }
       if (options.force) {
         await db.collection("calls").doc(callId).set({
           phoneLocationActive: true,
@@ -759,7 +771,8 @@
   async function startDriverPhoneLocation(callIdOverride) {
     if (!isMobileGpsEnabled()) return toast("Módulo de localização por celular desativado no superadmin.", "danger");
     if (!navigator.geolocation) return toast("Este celular/navegador não liberou geolocalização.", "danger");
-    const callId = callIdOverride || $("driverLocationCall") && $("driverLocationCall").value;
+    const explicitCallId = (typeof callIdOverride === "string" || typeof callIdOverride === "number") ? String(callIdOverride) : "";
+    const callId = explicitCallId || ($("driverLocationCall") && $("driverLocationCall").value);
     const call = callId && state.calls[callId];
     if (!call) return toast("Selecione um chamado ativo para enviar a localizacao do celular.", "danger");
     if ($("driverLocationCall")) $("driverLocationCall").value = callId;
