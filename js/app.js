@@ -10,7 +10,7 @@
   const { auth, secondaryAuth, db, ts, arrayUnion, emailIsAdmin, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
   const SYSTEM_SIGNATURE = "Powered by thIAguinho Soluções Digitais";
-  const LOGIN_FLOW_VERSION = "jm-v20-entrega-final-operacional";
+  const LOGIN_FLOW_VERSION = "jm-v20-1-gps-rtdb-auth-fix";
   let trackerTimer = null;
   let trackerBusy = false;
   let mapRefreshTimer = null;
@@ -1381,7 +1381,8 @@
     if (isMobileGpsRealtime()) {
       const rt = state.mobileGps && state.mobileGps.vehicles && state.mobileGps.vehicles[rtdbKey(vehicleId)];
       const p = rt && pointFrom(rt.point || rt.location || rt);
-      if (p) return { point: p, call: state.calls[rt.callId] || { id: rt.callId || "", phoneLocationUpdatedAt: rt.capturedAt || rt.updatedAt } };
+      const rawCallId = rt && (rt.rawCallId || rt.sourceCallId || rt.callOriginalId || rt.callId) || "";
+      if (p) return { point: p, call: state.calls[rawCallId] || state.calls[rt.callId] || { id: rawCallId || rt.callId || "", phoneLocationUpdatedAt: rt.capturedAt || rt.updatedAt } };
     }
     const rows = visibleRows(state.calls).filter((call) => call.vehicleId === vehicleId && call.phoneLocationActive);
     rows.sort((a, b) => String(b.phoneLocationUpdatedAt || b.updatedAt || "").localeCompare(String(a.phoneLocationUpdatedAt || a.updatedAt || "")));
@@ -1405,6 +1406,47 @@
       });
     }
     return vehicle;
+  }
+
+  function vehicleIdFromMobileGpsKey(key, rt) {
+    const rawVehicleId = rt && (rt.rawVehicleId || rt.sourceVehicleId || rt.vehicleOriginalId) || "";
+    if (rawVehicleId && state.vehicles[rawVehicleId]) return rawVehicleId;
+    const payloadVehicleId = rt && rt.vehicleId || "";
+    if (payloadVehicleId && state.vehicles[payloadVehicleId]) return payloadVehicleId;
+    return Object.keys(state.vehicles || {}).find((id) => rtdbKey(id) === key) || rawVehicleId || payloadVehicleId || key;
+  }
+
+  function appendMobileGpsSideMarkers(vehicles) {
+    if (!isMobileGpsEnabled() || !isMobileGpsRealtime()) return vehicles;
+    Object.entries(state.mobileGps && state.mobileGps.vehicles || {}).forEach(([key, rt]) => {
+      if (!rt || rt.active === false) return;
+      const point = pointFrom(rt.point || rt.location || rt);
+      if (!point) return;
+      const vehicleId = vehicleIdFromMobileGpsKey(key, rt);
+      const base = vehicles[vehicleId] || state.vehicles[vehicleId] || {};
+      const basePoint = vehicleLivePoint(base);
+      const baseSource = String(base.gpsSource || base.trackerLastSource || base.trackerSource || "");
+      const hasIndependentTracker = !!basePoint && !baseSource.includes("driver_phone");
+      if (!hasIndependentTracker) return;
+      const markerId = vehicleId + "__gps_celular";
+      vehicles[markerId] = Object.assign({}, base, {
+        id: markerId,
+        realVehicleId: vehicleId,
+        placa: (base.placa || vehicleId || "Veículo") + " - celular",
+        apelido: "GPS celular do motorista",
+        location: point,
+        mobileLocation: point,
+        driverPhoneLocation: point,
+        gpsSource: "driver_phone_rtdb",
+        trackerStatus: "GPS celular motorista (Realtime DB)",
+        lastPhoneGpsAt: rt.updatedAt || rt.capturedAt || rt.point && rt.point.capturedAt || "",
+        lastTrackerAt: rt.updatedAt || rt.capturedAt || rt.point && rt.point.capturedAt || "",
+        activeCallId: rt.rawCallId || rt.callOriginalId || rt.callId || "",
+        activeDriverId: rt.driverId || "",
+        activeDriverName: rt.driverName || ""
+      });
+    });
+    return vehicles;
   }
 
   function renderDashboard() {
@@ -2965,6 +3007,7 @@ Rota: ${url}`;
         });
       });
     }
+    appendMobileGpsSideMarkers(vehicles);
     const calls = Object.fromEntries(visibleRows(state.calls).map((c) => [c.id, c]));
     if (!active) return;
     if (active.id === "view-dashboard") window.JM.mapa.renderFleetMap("dashboardMap", vehicles, calls);

@@ -1,0 +1,12 @@
+js/firebase.js
+js/motorista.js
+database.rules.json
+motorista.html
+jm.html
+index.html
+cliente-chamado.html
+relatorio.html
+service-worker.js
+js/app.js
+ENTREGA_V20_1_GPS_RTDB_AUTH_FIX.md
+LISTA_ARQUIVOS_ALTERADOS_V20_1.txt

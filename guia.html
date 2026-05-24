@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JM Guinchos — Tour Inteligente de Uso</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#ffffff;
+      --ink:#152238;
+      --muted:#5d6f87;
+      --line:#d8e2ef;
+      --blue:#0278b8;
+      --blue2:#0aa4e8;
+      --green:#139957;
+      --orange:#f3a400;
+      --red:#c73535;
+      --dark:#0c1828;
+      --shadow:0 18px 50px rgba(16,34,62,.16);
+      --radius:22px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+    body{overflow-x:hidden}
+
+    .layout{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns: 390px 1fr;
+      gap:18px;
+      padding:18px;
+    }
+
+    .teacher{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      position:sticky;
+      top:18px;
+      min-height:calc(100vh - 36px);
+      max-height:calc(100vh - 36px);
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding-bottom:14px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .brandLogo{
+      width:54px;height:54px;border-radius:18px;
+      display:grid;place-items:center;
+      font-weight:900;
+      color:#fff;
+      background:linear-gradient(135deg,var(--blue),#064a73);
+      box-shadow:0 12px 30px rgba(2,120,184,.28);
+      letter-spacing:1px;
+    }
+
+    h1{font-size:19px;line-height:1.2;margin:0;text-transform:uppercase;letter-spacing:1.2px}
+    .brand p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+
+    .playbar{
+      display:grid;
+      grid-template-columns:1.2fr 1fr;
+      gap:10px;
+    }
+
+    button{
+      border:0;
+      border-radius:16px;
+      padding:13px 14px;
+      min-height:48px;
+      font-weight:900;
+      letter-spacing:.8px;
+      cursor:pointer;
+      box-shadow:0 8px 20px rgba(16,34,62,.12);
+    }
+    button:active{transform:translateY(1px)}
+    .primary{background:linear-gradient(135deg,var(--green),#08713d);color:#fff}
+    .blue{background:linear-gradient(135deg,var(--blue2),var(--blue));color:#fff}
+    .light{background:#edf4fb;color:#1d3a59;border:1px solid var(--line)}
+    .orange{background:linear-gradient(135deg,#ffd36b,var(--orange));color:#271b00}
+    .red{background:linear-gradient(135deg,#e34b4b,var(--red));color:#fff}
+
+    .progress{
+      background:#f0f5fb;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+    }
+    .bar{height:10px;border-radius:99px;background:#dbe7f4;overflow:hidden}
+    .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--blue2),var(--green));transition:.25s}
+    .progressText{font-size:12px;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-top:8px}
+
+    .lesson{
+      background:linear-gradient(180deg,#f8fbff,#eef5fd);
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:16px;
+    }
+    .badge{
+      display:inline-flex;
+      padding:6px 10px;
+      border-radius:99px;
+      background:#e4f5ff;
+      color:#006da5;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      margin-bottom:10px;
+    }
+    .lesson h2{font-size:20px;line-height:1.2;margin:0 0 8px}
+    .lesson p{font-size:15px;line-height:1.5;color:#31445e;margin:0}
+    .why{
+      margin-top:12px;
+      border-left:5px solid var(--orange);
+      padding:10px 12px;
+      background:#fff8e5;
+      color:#4d3900;
+      border-radius:14px;
+      font-size:14px;
+      line-height:1.45;
+    }
+
+    .steps{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:#fbfdff;
+      min-height:160px;
+      flex:1;
+    }
+
+    .step{
+      display:flex;
+      gap:10px;
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      cursor:pointer;
+      color:#52667f;
+    }
+    .step:last-child{border-bottom:0}
+    .step.active{
+      color:var(--ink);
+      background:#eaf6ff;
+    }
+    .num{
+      min-width:26px;height:26px;border-radius:50%;
+      background:#dce8f5;
+      display:grid;place-items:center;
+      font-size:12px;font-weight:900;color:#26415f;
+    }
+    .step.active .num{background:var(--blue);color:#fff}
+    .step strong{font-size:13px;display:block;color:inherit}
+    .step small{font-size:12px;display:block;margin-top:3px;line-height:1.35;color:inherit}
+
+    .stage{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:calc(100vh - 36px);
+    }
+
+    .top{
+      min-height:72px;
+      padding:14px 18px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      background:#ffffff;
+    }
+    .top h2{margin:0 0 4px;font-size:19px;text-transform:uppercase;letter-spacing:1.5px}
+    .top p{margin:0;color:var(--muted);font-size:13px}
+
+    .topTools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .topTools button{min-height:38px;padding:10px 12px;border-radius:12px;font-size:12px}
+
+    .screenArea{
+      flex:1;
+      position:relative;
+      padding:18px;
+      display:grid;
+      grid-template-columns:minmax(320px,1fr) 360px;
+      gap:18px;
+      background:
+        radial-gradient(circle at top left,rgba(10,164,232,.10),transparent 34%),
+        radial-gradient(circle at bottom right,rgba(19,153,87,.10),transparent 34%),
+        #eef4fa;
+      min-height:0;
+    }
+
+    .deviceShell{
+      min-width:0;
+      display:grid;
+      place-items:center;
+    }
+
+    .device{
+      position:relative;
+      width:100%;
+      max-width:1120px;
+      height:calc(100vh - 170px);
+      min-height:560px;
+      background:#fff;
+      border:10px solid #17253a;
+      border-radius:24px;
+      overflow:hidden;
+      box-shadow:0 26px 70px rgba(0,0,0,.22);
+      transition:.25s ease;
+    }
+    .device.mobile{
+      max-width:400px;
+      min-height:640px;
+      border-radius:36px;
+      border-width:12px;
+    }
+    iframe{width:100%;height:100%;border:0;background:#fff}
+
+    .focus{
+      position:absolute;
+      border:4px solid #ffbf2e;
+      border-radius:20px;
+      box-shadow:0 0 0 9999px rgba(255,255,255,.12),0 0 26px rgba(243,164,0,.7);
+      transition:.45s ease;
+      pointer-events:none;
+      z-index:4;
+    }
+
+    .bubble{
+      position:absolute;
+      background:#fff;
+      color:var(--ink);
+      border:2px solid #ffcf64;
+      border-radius:20px;
+      padding:14px 16px;
+      width:300px;
+      max-width:calc(100% - 24px);
+      box-shadow:0 18px 45px rgba(0,0,0,.20);
+      z-index:5;
+      transition:.45s ease;
+    }
+    .bubble:before{
+      content:"";
+      position:absolute;
+      width:16px;height:16px;
+      background:#fff;
+      border-left:2px solid #ffcf64;
+      border-top:2px solid #ffcf64;
+      transform:rotate(45deg);
+      top:-10px;
+      left:30px;
+    }
+    .bubble h3{margin:0 0 7px;font-size:15px;text-transform:uppercase;letter-spacing:.8px}
+    .bubble p{margin:0;color:#394d66;font-size:13px;line-height:1.45}
+
+    .curiosity{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:18px;
+      box-shadow:0 12px 35px rgba(16,34,62,.10);
+      align-self:start;
+      max-height:calc(100vh - 170px);
+      overflow:auto;
+    }
+    .curiosity h3{
+      margin:0 0 8px;
+      font-size:18px;
+      text-transform:uppercase;
+      letter-spacing:1.2px;
+      color:#0d2c48;
+    }
+    .curiosity .question{
+      padding:13px;
+      border-radius:16px;
+      background:#eef8ff;
+      border:1px solid #cbefff;
+      color:#08486a;
+      font-weight:900;
+      line-height:1.35;
+      margin-bottom:12px;
+    }
+    .curiosity ul{padding-left:20px;margin:12px 0;color:#31445e;line-height:1.5;font-size:14px}
+    .curiosity li{margin:7px 0}
+    .curiosity .answer{
+      background:#f4fff7;
+      border:1px solid #ccefd7;
+      border-radius:16px;
+      padding:13px;
+      color:#104a2b;
+      line-height:1.45;
+      font-size:14px;
+    }
+
+    .footer{
+      text-align:center;
+      padding:12px 18px;
+      color:#7b8da5;
+      font-size:12px;
+      border-top:1px solid var(--line);
+      letter-spacing:1px;
+      text-transform:uppercase;
+      background:#fff;
+    }
+
+    @media(max-width:1100px){
+      .layout{grid-template-columns:1fr}
+      .teacher{position:relative;top:auto;min-height:auto;max-height:none}
+      .screenArea{grid-template-columns:1fr}
+      .curiosity{max-height:none}
+      .device{height:680px}
+    }
+
+    @media(max-width:600px){
+      .layout{padding:8px;gap:10px}
+      .teacher,.stage{border-radius:18px}
+      .screenArea{padding:10px}
+      .top{align-items:flex-start;flex-direction:column}
+      .playbar{grid-template-columns:1fr 1fr}
+      .device{height:650px;min-height:650px;border-width:8px;border-radius:20px}
+      .device.mobile{max-width:100%;height:680px}
+      .bubble{width:260px;padding:12px}
+      .bubble h3{font-size:13px}
+      .bubble p{font-size:12px}
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <aside class="teacher">
+      <div class="brand">
+        <div class="brandLogo">JM</div>
+        <div>
+          <h1>Tour que ensina sozinho</h1>
+          <p>Balões claros, curiosidades e explicação automática da operação real.</p>
+        </div>
+      </div>
+
+      <div class="playbar">
+        <button id="play" class="primary">▶ COMEÇAR TOUR</button>
+        <button id="pause" class="light">⏸ PAUSAR</button>
+        <button id="prev" class="blue">◀ VOLTAR</button>
+        <button id="next" class="blue">AVANÇAR ▶</button>
+      </div>
+
+      <div class="playbar">
+        <button id="mobile" class="orange">📱 VER CELULAR</button>
+        <button id="desktop" class="light">🖥 VER PC</button>
+        <button id="voice" class="light">🔊 VOZ</button>
+        <button id="open" class="light">ABRIR TELA</button>
+      </div>
+
+      <div class="progress">
+        <div class="bar"><div id="fill" class="fill"></div></div>
+        <div id="progressText" class="progressText">Etapa 1</div>
+      </div>
+
+      <section class="lesson">
+        <span id="tag" class="badge">Comece aqui</span>
+        <h2 id="lessonTitle">Como a operação funciona?</h2>
+        <p id="lessonText">Clique em começar tour. O sistema vai explicar sozinho, sem escurecer a tela.</p>
+        <div id="why" class="why">Pergunta-chave: como uma empresa de guincho evita retrabalho, prova o atendimento e controla lucro?</div>
+      </section>
+
+      <div id="steps" class="steps"></div>
+    </aside>
+
+    <section class="stage">
+      <div class="top">
+        <div>
+          <h2 id="stageTitle">JM Guinchos</h2>
+          <p id="stageSubtitle">Tour didático com telas reais do sistema.</p>
+        </div>
+        <div class="topTools">
+          <button id="restart" class="light">Reiniciar</button>
+          <button id="speed" class="light">Normal</button>
+        </div>
+      </div>
+
+      <div class="screenArea">
+        <div class="deviceShell">
+          <div id="device" class="device">
+            <iframe id="frame" src="jm.html?v=tour-inteligente"></iframe>
+            <div id="focus" class="focus"></div>
+            <div id="bubble" class="bubble">
+              <h3 id="bubbleTitle">Chamado como ponto de partida</h3>
+              <p id="bubbleText">Cada atendimento nasce como chamado e alimenta os outros módulos.</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="curiosity">
+          <h3>Por que isso importa?</h3>
+          <div id="question" class="question">O que acontece quando o cliente liga perguntando “cadê o guincho?”</div>
+          <ul id="bullets">
+            <li>O atendente precisa responder rápido.</li>
+            <li>O gestor precisa ver motorista, veículo e status.</li>
+            <li>O motorista precisa provar o atendimento sem retrabalho.</li>
+          </ul>
+          <div id="answer" class="answer">
+            O JM conecta chamado, frota, motorista, provas e financeiro para que cada informação seja usada várias vezes sem ser digitada de novo.
+          </div>
+        </aside>
+      </div>
+
+      <div class="footer">Powered by thIAguinho Soluções Digitais</div>
+    </section>
+  </main>
+
+  <script>
+    const VERSION = "tour-inteligente-v3";
+
+    const steps = [
+      {
+        group:"Operação",
+        title:"Tudo começa no chamado",
+        screen:"jm.html?v="+VERSION,
+        mode:"desktop",
+        subtitle:"O chamado é a ordem de serviço viva.",
+        lesson:"Cada atendimento precisa nascer em um chamado. Esse chamado guarda cliente, seguradora, protocolo, placa, origem, destino, motorista, veículo, valor, status e provas.",
+        why:"Curiosidade: se o chamado for bem preenchido uma vez, o sistema consegue alimentar mapa, motorista, financeiro, relatório e portal do cliente sem redigitar.",
+        question:"Por que o chamado é o coração do sistema?",
+        bullets:["Ele organiza a ligação recebida pela JM.","Ele vira tarefa para o motorista.","Ele gera prova, cobrança, histórico e relatório."],
+        answer:"A ideia é simples: digitar uma vez e reaproveitar a informação em toda a operação.",
+        focus:[5,16,46,34],
+        bubble:[53,15],
+        bubbleTitle:"Chamado bem feito evita retrabalho",
+        bubbleText:"O atendente cria o atendimento e o sistema conecta o resto: motorista, frota, financeiro, cliente e relatório."
+      },
+      {
+        group:"Despacho",
+        title:"Escolher motorista e veículo",
+        screen:"jm.html?v="+VERSION,
+        mode:"desktop",
+        subtitle:"Despacho com informação, não no chute.",
+        lesson:"Depois de criar o chamado, o gestor escolhe o veículo e o motorista. O sistema precisa mostrar disponibilidade, localização e contexto para evitar erro.",
+        why:"Curiosidade: o despacho certo reduz atraso, gasto de combustível e reclamação do cliente.",
+        question:"Como saber quem deve ir para o atendimento?",
+        bullets:["Ver o veículo mais próximo ou disponível.","Conferir se o motorista está em atendimento.","Despachar com rota e status acompanháveis."],
+        answer:"O despacho transforma um chamado em ação real na rua.",
+        focus:[48,18,45,42],
+        bubble:[12,22],
+        bubbleTitle:"Mapa + frota + chamado",
+        bubbleText:"Aqui o gestor acompanha veículos, rota e atendimento para decidir quem deve ir."
+      },
+      {
+        group:"Motorista",
+        title:"Painel feito para celular",
+        screen:"motorista.html?v="+VERSION,
+        mode:"mobile",
+        subtitle:"Poucos toques para quem está na estrada.",
+        lesson:"O motorista não precisa ver a empresa inteira. Ele precisa ver o chamado dele, abrir rota, mudar status, enviar provas, lançar despesas e finalizar.",
+        why:"Curiosidade: no guincho real, o motorista usa o celular com pressa, às vezes com uma mão só. Botões pequenos e mensagens mudas matam a operação.",
+        question:"O que o motorista precisa fazer rápido?",
+        bullets:["Abrir rota do atendimento.","Avisar status: a caminho, no local, transporte, entregue.","Enviar fotos, assinatura, áudios e despesas com confirmação."],
+        answer:"A UI do motorista precisa ser direta, grande e sem ruído.",
+        focus:[7,8,86,38],
+        bubble:[8,49],
+        bubbleTitle:"Ações grandes e claras",
+        bubbleText:"O motorista trabalha em campo. Cada botão precisa dizer exatamente o que faz e mostrar sucesso ou erro."
+      },
+      {
+        group:"GPS celular",
+        title:"Localização como apoio",
+        screen:"motorista.html?v="+VERSION,
+        mode:"mobile",
+        subtitle:"GPS do celular é módulo opcional.",
+        lesson:"Quando ativado pelo gestor, o GPS do celular ajuda a central a ver a posição do motorista quando o rastreador do veículo falha ou atrasa.",
+        why:"Curiosidade: GPS vivo não deve ficar atualizando o chamado no Firestore toda hora. Por isso ele usa Realtime Database para evitar travar e piscar.",
+        question:"Por que usar GPS do celular além do rastreador?",
+        bullets:["Ajuda quando o rastreador está sem sinal.","Mostra posição durante o atendimento.","Serve como fallback sem substituir o RAFA."],
+        answer:"O rastreador do veículo continua principal. O celular entra como apoio inteligente.",
+        focus:[7,40,86,30],
+        bubble:[8,72],
+        bubbleTitle:"GPS sem travar o painel",
+        bubbleText:"A posição precisa ir para o canal certo e aparecer no mapa sem redesenhar a tela inteira."
+      },
+      {
+        group:"Provas",
+        title:"Fotos, assinatura e áudios",
+        screen:"motorista.html?v="+VERSION,
+        mode:"mobile",
+        subtitle:"Provar o atendimento para gestor, cliente e seguradora.",
+        lesson:"O motorista envia fotos, assinatura, checklist e vários áudios. Cada envio deve mostrar carregando, sucesso ou erro real.",
+        why:"Curiosidade: para seguradora, o atendimento não termina no transporte. Ele termina quando existe prova organizada.",
+        question:"O que vira prova do atendimento?",
+        bullets:["Fotos do veículo e local.","Assinatura/aceite quando necessário.","Áudios e observações do motorista."],
+        answer:"As provas alimentam o relatório final e podem ser liberadas para cliente ou seguradora.",
+        focus:[7,66,86,28],
+        bubble:[8,33],
+        bubbleTitle:"Nada de botão mudo",
+        bubbleText:"Se enviou, tem que confirmar. Se falhou, tem que explicar por quê: Cloudinary, permissão, arquivo grande ou chamado não selecionado."
+      },
+      {
+        group:"Financeiro",
+        title:"Despesa lançada uma vez",
+        screen:"jm.html?v="+VERSION,
+        mode:"desktop",
+        subtitle:"O fluxo financeiro precisa conversar com a operação.",
+        lesson:"Quando o motorista lança combustível, pedágio ou manutenção, o gestor aprova e isso vira financeiro automaticamente, vinculado ao chamado, veículo e motorista.",
+        why:"Curiosidade: o lucro real do veículo só aparece quando as despesas de campo entram no centro de custo correto.",
+        question:"Por que não lançar a mesma coisa várias vezes?",
+        bullets:["Evita erro humano.","Atualiza KPI do veículo e motorista.","Deixa o financeiro ligado ao chamado."],
+        answer:"O sistema precisa transformar ação operacional em dado financeiro automaticamente.",
+        focus:[5,58,48,33],
+        bubble:[55,58],
+        bubbleTitle:"Financeiro integrado",
+        bubbleText:"Despesa aprovada vira saída financeira. Recebimento atualiza saldo do chamado. KPI nasce desses vínculos."
+      },
+      {
+        group:"Cliente",
+        title:"Link público opcional",
+        screen:"cliente-chamado.html?v="+VERSION,
+        mode:"mobile",
+        subtitle:"Cliente acompanha sem instalar aplicativo.",
+        lesson:"O cliente pode receber um link seguro para acompanhar status, timeline, provas liberadas, chat e negociação quando a JM autorizar.",
+        why:"Curiosidade: um bom portal reduz ligações repetidas do tipo “onde está o guincho?”.",
+        question:"O que o cliente pode ver?",
+        bullets:["Status simples e humano do atendimento.","Timeline do processo.","Fotos/provas liberadas e chat com a JM."],
+        answer:"O cliente vê só o que é seguro. Nada de lucro, frota inteira, despesas internas ou dados de outros chamados.",
+        focus:[7,10,86,45],
+        bubble:[8,58],
+        bubbleTitle:"Transparência controlada",
+        bubbleText:"O link público informa o cliente, mas protege os dados internos da empresa."
+      },
+      {
+        group:"Chat",
+        title:"Conversa no atendimento",
+        screen:"cliente-chamado.html?v="+VERSION,
+        mode:"mobile",
+        subtitle:"Cliente e JM conversam dentro do chamado.",
+        lesson:"O chat público fica vinculado ao token do atendimento. O cliente manda mensagem, e a equipe responde pelo painel interno.",
+        why:"Curiosidade: chat vinculado ao chamado evita conversa perdida no WhatsApp sem contexto.",
+        question:"Por que chat dentro do sistema?",
+        bullets:["Fica registrado no histórico.","A equipe vê o contexto do atendimento.","Pode ajudar em negociação e envio de comprovantes."],
+        answer:"A conversa vira parte da rastreabilidade do serviço.",
+        focus:[7,55,86,32],
+        bubble:[8,24],
+        bubbleTitle:"Mensagem com contexto",
+        bubbleText:"Cada mensagem sabe de qual atendimento ela faz parte."
+      },
+      {
+        group:"Relatório",
+        title:"Relatório e PDF",
+        screen:"relatorio.html?v="+VERSION,
+        mode:"desktop",
+        subtitle:"Provas organizadas para cliente e seguradora.",
+        lesson:"O relatório reúne dados do chamado, protocolo, timeline, fotos, assinatura, áudios e observações. Ele pode ser impresso ou salvo como PDF.",
+        why:"Curiosidade: o relatório é a memória oficial do atendimento. Ele protege a empresa e facilita faturamento com seguradora.",
+        question:"O que precisa aparecer no relatório?",
+        bullets:["Dados do chamado, motorista e veículo.","Linha do tempo do atendimento.","Provas liberadas: fotos, assinatura, áudios e observações."],
+        answer:"O relatório transforma o atendimento em documento profissional.",
+        focus:[9,10,82,62],
+        bubble:[22,73],
+        bubbleTitle:"Documento profissional",
+        bubbleText:"A JM pode exportar ou imprimir o atendimento com provas e assinatura discreta do sistema."
+      },
+      {
+        group:"Gestão",
+        title:"Curiosidade final",
+        screen:"jm.html?v="+VERSION,
+        mode:"desktop",
+        subtitle:"O objetivo é uma operação sem retrabalho.",
+        lesson:"O JM Guinchos não é só cadastro. Ele precisa conectar operação, mapa, motorista, cliente, provas, financeiro, frota e relatório.",
+        why:"Curiosidade: o diferencial não é ter muitas telas. É cada tela conversar com a outra sem obrigar a equipe a repetir lançamento.",
+        question:"Qual é a lógica principal do sistema?",
+        bullets:["Chamado organiza a operação.","Motorista alimenta provas e despesas.","Gestor acompanha, aprova e transforma em relatório e financeiro."],
+        answer:"O sistema deve trabalhar como uma central inteligente de guincho, não como planilhas separadas.",
+        focus:[20,8,60,84],
+        bubble:[31,40],
+        bubbleTitle:"Fluxo único",
+        bubbleText:"Uma informação lançada no lugar certo deve alimentar o restante do sistema."
+      }
+    ];
+
+    const state = {i:0, playing:false, voice:false, speed:1, timer:null};
+
+    const $ = (id)=>document.getElementById(id);
+    const els = {
+      frame:$("frame"), device:$("device"), focus:$("focus"), bubble:$("bubble"),
+      tag:$("tag"), lessonTitle:$("lessonTitle"), lessonText:$("lessonText"), why:$("why"),
+      stageTitle:$("stageTitle"), stageSubtitle:$("stageSubtitle"),
+      bubbleTitle:$("bubbleTitle"), bubbleText:$("bubbleText"),
+      question:$("question"), bullets:$("bullets"), answer:$("answer"),
+      fill:$("fill"), progressText:$("progressText"), steps:$("steps")
+    };
+
+    function buildSteps(){
+      els.steps.innerHTML = steps.map((s,i)=>`
+        <div class="step" data-i="${i}">
+          <div class="num">${i+1}</div>
+          <div><strong>${s.group} — ${s.title}</strong><small>${s.subtitle}</small></div>
+        </div>
+      `).join("");
+      els.steps.querySelectorAll(".step").forEach(x=>x.onclick=()=>go(Number(x.dataset.i), false));
+    }
+
+    function setMode(mode){
+      els.device.classList.toggle("mobile", mode==="mobile");
+    }
+
+    function position(){
+      const s = steps[state.i];
+      const r = els.device.getBoundingClientRect();
+      const [x,y,w,h] = s.focus;
+      els.focus.style.left = (x/100*r.width)+"px";
+      els.focus.style.top = (y/100*r.height)+"px";
+      els.focus.style.width = (w/100*r.width)+"px";
+      els.focus.style.height = (h/100*r.height)+"px";
+      let [bx,by] = s.bubble;
+      let left = bx/100*r.width;
+      let top = by/100*r.height;
+      const bw = Math.min(300, r.width-24);
+      if(left+bw > r.width-12) left = r.width-bw-12;
+      if(left < 12) left = 12;
+      if(top+150 > r.height-12) top = r.height-162;
+      if(top < 12) top = 12;
+      els.bubble.style.left = left+"px";
+      els.bubble.style.top = top+"px";
+    }
+
+    function speak(txt){
+      if(!state.voice || !("speechSynthesis" in window)) return;
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = "pt-BR";
+      u.rate = .98;
+      speechSynthesis.speak(u);
+    }
+
+    function go(i, auto){
+      clearTimeout(state.timer);
+      state.i = (i + steps.length) % steps.length;
+      const s = steps[state.i];
+
+      setMode(s.mode);
+      if(els.frame.src.indexOf(s.screen) === -1) els.frame.src = s.screen;
+
+      els.tag.textContent = s.group;
+      els.lessonTitle.textContent = s.title;
+      els.lessonText.textContent = s.lesson;
+      els.why.textContent = s.why;
+      els.stageTitle.textContent = s.title;
+      els.stageSubtitle.textContent = s.subtitle;
+      els.bubbleTitle.textContent = s.bubbleTitle;
+      els.bubbleText.textContent = s.bubbleText;
+      els.question.textContent = s.question;
+      els.bullets.innerHTML = s.bullets.map(b=>`<li>${b}</li>`).join("");
+      els.answer.textContent = s.answer;
+      els.fill.style.width = ((state.i+1)/steps.length*100)+"%";
+      els.progressText.textContent = `Etapa ${state.i+1} de ${steps.length} — ${s.group}`;
+
+      document.querySelectorAll(".step").forEach((x,idx)=>x.classList.toggle("active", idx===state.i));
+      setTimeout(position, 180);
+      speak(`${s.title}. ${s.lesson}. ${s.why}`);
+
+      if(auto && state.playing){
+        const delay = state.speed === 2 ? 6200 : state.speed === .7 ? 11000 : 8500;
+        state.timer = setTimeout(()=>go(state.i+1,true), delay);
+      }
+    }
+
+    function play(){state.playing=true;go(state.i,true)}
+    function pause(){state.playing=false;clearTimeout(state.timer); if("speechSynthesis" in window) speechSynthesis.cancel()}
+
+    $("play").onclick=play;
+    $("pause").onclick=pause;
+    $("next").onclick=()=>go(state.i+1,state.playing);
+    $("prev").onclick=()=>go(state.i-1,state.playing);
+    $("restart").onclick=()=>{state.i=0;go(0,state.playing)};
+    $("mobile").onclick=()=>setMode("mobile");
+    $("desktop").onclick=()=>setMode("desktop");
+    $("voice").onclick=()=>{
+      state.voice=!state.voice;
+      $("voice").textContent = state.voice ? "🔊 VOZ ON" : "🔇 VOZ OFF";
+      if(!state.voice && "speechSynthesis" in window) speechSynthesis.cancel();
+      if(state.voice) speak(`${steps[state.i].title}. ${steps[state.i].lesson}`);
+    };
+    $("open").onclick=()=>window.open(steps[state.i].screen,"_blank");
+    $("speed").onclick=()=>{
+      state.speed = state.speed === 1 ? 2 : state.speed === 2 ? .7 : 1;
+      $("speed").textContent = state.speed===2 ? "Rápido" : state.speed===.7 ? "Lento" : "Normal";
+      if(state.playing) go(state.i,true);
+    };
+
+    window.addEventListener("resize", position);
+    els.frame.addEventListener("load",()=>setTimeout(position,300));
+
+    buildSteps();
+    go(0,false);
+  </script>
+</body>
+</html>

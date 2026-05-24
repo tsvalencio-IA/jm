@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JM Guinchos — Guia Operacional Automático</title>
+<style>
+:root {
+  --bg: #07111f;
+  --panel: #0f1c2d;
+  --panel-2: #15243a;
+  --line: #263850;
+  --text: #e6edf7;
+  --muted: #8da2bd;
+  --accent: #38bdf8;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --white: #ffffff;
+  --radius: 8px;
+  --guide-bg:#f3f7fb;
+  --guide-card:#ffffff;
+  --guide-ink:#142033;
+  --guide-muted:#60738c;
+  --guide-line:#d8e3f0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--guide-bg);color:var(--guide-ink)}
+button,input,select,textarea{font:inherit} button{cursor:pointer}
+.hidden{display:none!important}.muted{color:var(--muted)}.small{font-size:.78rem}.danger{color:var(--red)}.ok{color:var(--green)}.warn{color:var(--amber)}.info{color:var(--accent)}
+.guide-shell{min-height:100vh;display:grid;grid-template-columns:390px minmax(0,1fr);gap:14px;padding:14px}
+.teacher{background:var(--guide-card);border:1px solid var(--guide-line);border-radius:18px;box-shadow:0 18px 48px rgba(15,34,58,.14);padding:16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:14px;max-height:calc(100vh - 28px)}
+.teacher-brand{display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--guide-line)}
+.teacher-logo{width:50px;height:50px;border-radius:12px;background:#0f1c2d;color:var(--accent);border:1px solid rgba(56,189,248,.55);display:grid;place-items:center;font-weight:900}
+.teacher h1{font-size:1.08rem;margin:0 0 4px;letter-spacing:.05em;text-transform:uppercase;color:#0d1f33}.teacher p{margin:0;color:var(--guide-muted);line-height:1.4}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.controls button,.top-actions button{border:0;border-radius:10px;padding:11px 12px;font-weight:800;min-height:44px}
+.g-primary{background:#22c55e;color:#052e16}.g-blue{background:#0ea5e9;color:#062033}.g-light{background:#edf4fb;color:#17324d;border:1px solid var(--guide-line)!important}.g-amber{background:#fbbf24;color:#2d2100}
+.progress{background:#f6f9fd;border:1px solid var(--guide-line);border-radius:14px;padding:10px}.bar{height:9px;background:#dde8f5;border-radius:999px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#22c55e);transition:.25s}.counter{font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--guide-muted);margin-top:8px}
+.lesson{background:#f7fbff;border:1px solid var(--guide-line);border-radius:16px;padding:14px}.tag{display:inline-flex;background:#dff3ff;color:#075985;border-radius:999px;padding:5px 9px;font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.lesson h2{margin:0 0 7px;color:#102338;font-size:1.15rem}.lesson p{font-size:.9rem}.why{margin-top:10px;background:#fff7e3;border-left:4px solid var(--amber);border-radius:10px;padding:10px;color:#473500;font-size:.84rem;line-height:1.42}
+.step-list{overflow:auto;border:1px solid var(--guide-line);border-radius:14px;background:#fff;flex:1}.step-item{display:flex;gap:9px;padding:10px;border-bottom:1px solid #e8eff7;color:#5c7188;cursor:pointer}.step-item:last-child{border-bottom:0}.step-item.active{background:#eaf7ff;color:#102338}.step-num{min-width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#dce8f5;font-size:.7rem;font-weight:900}.step-item.active .step-num{background:#0ea5e9;color:#032031}.step-item strong{font-size:.79rem;display:block}.step-item small{font-size:.72rem;display:block;margin-top:2px;line-height:1.35}
+.stage{background:#fff;border:1px solid var(--guide-line);border-radius:18px;box-shadow:0 18px 48px rgba(15,34,58,.14);overflow:hidden;display:flex;flex-direction:column;min-height:calc(100vh - 28px)}
+.stage-top{height:66px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 16px;border-bottom:1px solid var(--guide-line)}.stage-top h2{margin:0 0 3px;color:#102338;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase}.stage-top p{margin:0;color:var(--guide-muted);font-size:.8rem}.top-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.top-actions button{min-height:36px;padding:8px 10px;font-size:.75rem}
+.work{flex:1;display:grid;grid-template-columns:minmax(420px,1fr) 360px;gap:14px;background:#e9f1fa;padding:14px;min-height:0}
+.mock-wrap{min-width:0;display:grid;place-items:center}.device{width:100%;max-width:1160px;height:calc(100vh - 136px);min-height:670px;background:var(--bg);border:8px solid #0b1625;border-radius:18px;overflow:hidden;box-shadow:0 26px 68px rgba(0,0,0,.22);position:relative;transition:.25s}.device.mobile{max-width:410px;border-width:11px;border-radius:34px;min-height:720px;height:calc(100vh - 136px)}
+.mock-screen{display:none;height:100%;background:var(--bg);color:var(--text);overflow:auto}.mock-screen.active{display:block}
+/* Sistema JM fiel */
+.app-demo{min-height:100%;display:grid;grid-template-columns:250px minmax(0,1fr)}.sidebar{background:#0c1726;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:100%}.sidebar-head{padding:18px;border-bottom:1px solid var(--line)}.brand-row{display:flex;align-items:center;gap:12px}.brand-mark{width:46px;height:46px;display:grid;place-items:center;border:1px solid rgba(56,189,248,.55);color:var(--accent);font-weight:900;border-radius:var(--radius)}.sidebar-title{font-weight:900;letter-spacing:.1em}.sidebar-sub{font-size:.72rem;color:var(--accent);letter-spacing:.16em;text-transform:uppercase}.nav{padding:12px;display:grid;gap:6px}.nav button{text-align:left;color:var(--muted);background:transparent;border:1px solid transparent;padding:11px 12px;border-radius:var(--radius);font-weight:750}.nav button.active,.nav button:hover{color:var(--white);background:var(--panel-2);border-color:var(--line)}.sidebar-foot{margin-top:auto;padding:14px;border-top:1px solid var(--line)}
+.main-demo{min-width:0}.topbar{height:68px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(15,28,45,.92)}.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.content{padding:18px;display:grid;gap:18px}.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}.col-3{grid-column:span 3}.col-4{grid-column:span 4}.col-5{grid-column:span 5}.col-6{grid-column:span 6}.col-7{grid-column:span 7}.col-8{grid-column:span 8}.col-9{grid-column:span 9}.col-12{grid-column:span 12}.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 18px 40px rgba(0,0,0,.18)}.panel h2{font-size:1rem;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px}.panel h3{margin:0 0 10px}.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}.kpi span{display:block;color:var(--muted);font-size:.78rem}.kpi strong{font-size:1.55rem}.btn{border:1px solid var(--line);background:var(--panel-2);color:var(--text);border-radius:var(--radius);padding:10px 12px;font-weight:800}.btn.primary{background:var(--accent);border-color:var(--accent);color:#062033}.btn.good{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.45);color:#bbf7d0}.btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.46);color:#fecaca}.btn.warn{background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.50);color:#fde68a}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;color:var(--muted);font-size:.78rem;margin-bottom:5px}input,select,textarea{width:100%;background:#0b1524;border:1px solid var(--line);color:var(--text);border-radius:var(--radius);padding:10px}.wide{grid-column:1/-1}.card-list{display:grid;gap:10px}.card{background:#0b1524;border:1px solid var(--line);border-radius:var(--radius);padding:12px}.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:.72rem;font-weight:800;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);color:#bae6fd}.badge.good{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.45);color:#bbf7d0}.badge.warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.45);color:#fde68a}.badge.danger{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.45);color:#fecaca}
+.map-box{height:330px;background:#0b1524;border:1px solid var(--line);border-radius:var(--radius);position:relative;overflow:hidden}.map-grid{position:absolute;inset:0;background:linear-gradient(90deg,rgba(56,189,248,.08) 1px,transparent 1px),linear-gradient(rgba(56,189,248,.08) 1px,transparent 1px);background-size:48px 48px}.road{position:absolute;height:8px;border-radius:999px;background:#233c5a}.r1{width:80%;left:8%;top:42%;transform:rotate(-9deg)}.r2{width:65%;left:18%;top:58%;transform:rotate(18deg)}.route{position:absolute;left:22%;top:36%;width:52%;height:45%;border-left:5px solid var(--accent);border-bottom:5px solid var(--accent);border-radius:0 0 0 44px}.pin{position:absolute;width:25px;height:25px;border-radius:50%;border:4px solid #fff;box-shadow:0 8px 18px rgba(0,0,0,.35)}.pin.car{background:var(--green);left:20%;top:34%}.pin.dest{background:var(--red);left:71%;top:77%}.pin.phone{background:var(--amber);left:36%;top:47%}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;border-bottom:1px solid var(--line);padding:9px;color:var(--muted);font-size:.82rem}.table th{color:var(--text);font-size:.74rem;text-transform:uppercase}.timeline{display:grid;gap:9px}.event{display:flex;gap:9px;color:var(--muted);font-size:.82rem}.event:before{content:"";width:11px;height:11px;border-radius:50%;background:var(--accent);margin-top:3px;flex:0 0 auto}.proof-thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.proof{height:76px;border:1px solid var(--line);border-radius:var(--radius);background:#0b1524;display:grid;place-items:center;color:var(--muted);font-size:.75rem;text-align:center;padding:6px}
+.public-page-demo{background:#f8fafc;color:#0f172a;min-height:100%;padding:18px}.public-shell-demo{max-width:860px;margin:auto;display:grid;gap:14px}.public-shell-demo .panel{background:#fff;color:#0f172a;border-color:#dbe3ef;box-shadow:0 8px 22px rgba(15,23,42,.08)}.public-shell-demo .muted{color:#64748b}.public-shell-demo .btn{color:#0f172a;background:#e2e8f0;border-color:#cbd5e1}.public-shell-demo .btn.good{background:#dcfce7;color:#14532d}.public-shell-demo .kpi{background:#f8fafc;border-color:#dbe3ef;color:#0f172a}.chat-messages{display:grid;gap:8px}.msg{padding:10px;border-radius:12px;background:#eef2ff;color:#1e293b}.msg.client{background:#ecfeff}.signature-footer{text-align:center;color:#64748b;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:12px}
+.report-demo{background:#f8fafc;color:#0f172a;min-height:100%;padding:18px}.report-page{max-width:980px;margin:auto}.report-card{background:#fff;border:1px solid #dbe3ef;border-radius:10px;padding:18px;margin-bottom:12px}.report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.report-field{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px}.report-field span{display:block;color:#64748b;font-size:.75rem}.report-field strong{color:#0f172a}
+.mobile .app-demo{display:block}.mobile .sidebar{display:none}.mobile .topbar{height:auto;min-height:64px;padding:12px}.mobile .content{padding:12px}.mobile .grid{display:block}.mobile .panel,.mobile .kpi{margin-bottom:12px}.mobile .col-3,.mobile .col-4,.mobile .col-5,.mobile .col-6,.mobile .col-7,.mobile .col-8,.mobile .col-9,.mobile .col-12{grid-column:auto}.mobile .form-grid{grid-template-columns:1fr}.mobile .map-box{height:230px}.mobile .proof-thumbs{grid-template-columns:repeat(2,1fr)}
+/* Overlays */
+.focus{position:absolute;border:4px solid #fbbf24;border-radius:14px;box-shadow:0 0 0 9999px rgba(255,255,255,.10),0 0 26px rgba(251,191,36,.75);pointer-events:none;z-index:80;transition:.32s ease}.balloon{position:absolute;background:#fff;color:#122033;border:2px solid #fbbf24;border-radius:16px;padding:13px 14px;width:330px;max-width:calc(100% - 20px);box-shadow:0 20px 46px rgba(0,0,0,.28);z-index:81;transition:.32s ease}.balloon h3{margin:0 0 6px;font-size:.92rem;letter-spacing:.05em;text-transform:uppercase}.balloon p{margin:0;color:#3d5067;font-size:.83rem;line-height:1.43}
+.curiosity{background:#fff;border:1px solid var(--guide-line);border-radius:18px;padding:16px;box-shadow:0 10px 28px rgba(15,34,58,.10);align-self:start;max-height:calc(100vh - 136px);overflow:auto}.curiosity h3{margin:0 0 8px;color:#102338;text-transform:uppercase;letter-spacing:.06em}.question{background:#eaf7ff;border:1px solid #cbeeff;border-radius:12px;padding:12px;color:#075985;font-weight:900;line-height:1.35}.curiosity ul{margin:12px 0;padding-left:20px;color:#33465c;line-height:1.5}.curiosity li{margin:6px 0}.answer{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px;color:#14532d;line-height:1.45}.footer{padding:12px;text-align:center;background:#fff;border-top:1px solid var(--guide-line);color:#7b8fa8;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+@media(max-width:1100px){.guide-shell{grid-template-columns:1fr}.teacher{position:relative;top:auto;max-height:none}.work{grid-template-columns:1fr}.curiosity{max-height:none}.device{height:760px}.step-list{max-height:280px}}
+@media(max-width:640px){.guide-shell{padding:8px;gap:8px}.teacher,.stage{border-radius:14px}.controls{grid-template-columns:1fr 1fr}.stage-top{height:auto;min-height:70px;align-items:flex-start;flex-direction:column;padding:12px}.work{padding:8px}.device{height:760px;min-height:760px;border-width:6px}.device.mobile{max-width:100%;height:780px}.balloon{width:280px}.teacher h1{font-size:.98rem}}
+</style>
+</head>
+<body>
+<div class="guide-shell">
+  <aside class="teacher">
+    <div class="teacher-brand">
+      <div class="teacher-logo">JM</div>
+      <div>
+        <h1>Guia automático do sistema</h1>
+        <p>Sem login: telas fiéis ao fluxo para ensinar operação, gestor, motorista, cliente e relatório.</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="playBtn" class="g-primary">▶ COMEÇAR</button>
+      <button id="pauseBtn" class="g-light">⏸ PAUSAR</button>
+      <button id="prevBtn" class="g-blue">◀ VOLTAR</button>
+      <button id="nextBtn" class="g-blue">AVANÇAR ▶</button>
+    </div>
+    <div class="controls">
+      <button id="mobileBtn" class="g-amber">📱 MOBILE</button>
+      <button id="desktopBtn" class="g-light">🖥 PC</button>
+      <button id="voiceBtn" class="g-light">🔊 VOZ</button>
+      <button id="speedBtn" class="g-light">NORMAL</button>
+    </div>
+    <div class="progress"><div class="bar"><div id="fill" class="fill"></div></div><div id="counter" class="counter">Etapa 1</div></div>
+    <section class="lesson">
+      <span id="tag" class="tag">Guia</span>
+      <h2 id="lessonTitle">Tour operacional</h2>
+      <p id="lessonText">Clique em começar para aprender cada função sem precisar fazer login.</p>
+      <div id="why" class="why">O objetivo é entender como o sistema trabalha: chamado → motorista → frota → provas → financeiro → cliente → relatório.</div>
+    </section>
+    <div id="stepList" class="step-list"></div>
+  </aside>
+  <section class="stage">
+    <div class="stage-top">
+      <div><h2 id="stageTitle">JM Guinchos</h2><p id="stageSub">Demonstração fiel da UI e do fluxo.</p></div>
+      <div class="top-actions"><button id="restartBtn" class="g-light">Reiniciar</button></div>
+    </div>
+    <div class="work">
+      <div class="mock-wrap">
+        <div id="device" class="device">
+          <div id="screen-dashboard" class="mock-screen active">
+            <div class="app-demo">
+              <aside class="sidebar">
+                <div class="sidebar-head"><div class="brand-row"><div class="brand-mark">JM</div><div><div class="sidebar-title">JM GUINCHOS</div><div class="sidebar-sub">gestão operacional</div></div></div></div>
+                <nav class="nav">
+                  <button class="active">Dashboard</button><button>Central Operacional</button><button>Chamados</button><button>Finalizados</button><button>Clientes / Seguradoras</button><button>Mapa / Tracker</button><button>Financeiro</button><button>Pagamentos</button><button>Frota</button><button>Equipe</button>
+                </nav>
+                <div class="sidebar-foot small muted">Usuário: gestor@jm.com</div>
+              </aside>
+              <main class="main-demo">
+                <header class="topbar"><div><h2 style="margin:0">Dashboard</h2><div class="muted small">Tracker RAFA + GPS celular modular + OSRM</div></div><div class="actions"><button class="btn primary">Novo chamado</button></div></header>
+                <div class="content">
+                  <section class="grid" id="dashKpis">
+                    <div class="kpi col-3"><span>Chamados hoje</span><strong>12</strong></div>
+                    <div class="kpi col-3"><span>Em rota</span><strong>04</strong></div>
+                    <div class="kpi col-3"><span>Receita prevista</span><strong>R$ 4.850</strong></div>
+                    <div class="kpi col-3"><span>Despesas pendentes</span><strong>03</strong></div>
+                  </section>
+                  <section class="grid">
+                    <div class="panel col-7" id="dashCentral"><h2>Central operacional</h2><div class="card-list"><div class="card"><span class="badge warn">aguardando despacho</span> Pane elétrica — HB20 — protocolo 34922</div><div class="card"><span class="badge good">motorista a caminho</span> Acidente leve — Onix — seguradora Delta</div><div class="card"><span class="badge">no local</span> Remoção — Corolla — cliente particular</div></div></div>
+                    <div class="panel col-5" id="dashAlerts"><h2>Alertas inteligentes</h2><div class="card-list"><div class="card">FHA4B30 sem atualização RAFA há 12 min.</div><div class="card">Chamado finalizado aguardando faturamento.</div><div class="card">Cliente enviou mensagem no portal público.</div></div></div>
+                  </section>
+                </div>
+              </main>
+            </div>
+          </div>
+
+          <div id="screen-chamado" class="mock-screen">
+            <div class="app-demo">
+              <aside class="sidebar"><div class="sidebar-head"><div class="brand-row"><div class="brand-mark">JM</div><div><div class="sidebar-title">JM GUINCHOS</div><div class="sidebar-sub">chamados</div></div></div></div><nav class="nav"><button>Dashboard</button><button>Central Operacional</button><button class="active">Chamados</button><button>Clientes / Seguradoras</button><button>Mapa / Tracker</button><button>Financeiro</button><button>Frota</button></nav></aside>
+              <main class="main-demo">
+                <header class="topbar"><div><h2 style="margin:0">Chamados</h2><div class="muted small">Acionamento, seguradora, origem/destino e despacho</div></div></header>
+                <div class="content">
+                  <section class="grid">
+                    <div class="panel col-7" id="formChamado"><h2>Novo / editar chamado</h2><div class="form-grid">
+                      <div><label>Cliente final</label><input value="Maria Aparecida"></div><div><label>Telefone / WhatsApp</label><input value="(17) 99999-0000"></div>
+                      <div><label>Seguradora / pagador</label><select><option>Assistência 24h Delta</option></select></div><div><label>Protocolo externo</label><input value="DEL-34922"></div>
+                      <div><label>Placa do cliente</label><input value="ABC1D23"></div><div><label>Veículo do cliente</label><input value="HB20 prata"></div>
+                      <div class="wide"><label>Origem</label><input value="Rod. Washington Luís, km 440"></div><div class="wide"><label>Destino</label><input value="Oficina JM / Pátio"></div>
+                      <div><label>Tipo de serviço</label><select><option>Guincho plataforma</option></select></div><div><label>Valor previsto</label><input value="R$ 650,00"></div>
+                      <div class="wide actions"><button class="btn primary">Salvar chamado</button><button class="btn">Gerar link do cliente</button><button class="btn warn">Traçar rota</button></div>
+                    </div></div>
+                    <div class="panel col-5" id="listaChamados"><h2>Fila de chamados</h2><div class="card-list"><div class="card"><span class="badge warn">Aguardando despacho</span><br><b>HB20 prata</b><br><span class="muted small">Origem: km 440 • Protocolo DEL-34922</span></div><div class="card"><span class="badge good">Despachado</span><br><b>Onix branco</b><br><span class="muted small">Motorista: João • Plataforma 01</span></div></div></div>
+                  </section>
+                </div>
+              </main>
+            </div>
+          </div>
+
+          <div id="screen-despacho" class="mock-screen">
+            <div class="app-demo">
+              <aside class="sidebar"><div class="sidebar-head"><div class="brand-row"><div class="brand-mark">JM</div><div><div class="sidebar-title">JM GUINCHOS</div><div class="sidebar-sub">central</div></div></div></div><nav class="nav"><button>Dashboard</button><button class="active">Central Operacional</button><button>Chamados</button><button>Mapa / Tracker</button><button>Financeiro</button></nav></aside>
+              <main class="main-demo">
+                <header class="topbar"><div><h2 style="margin:0">Central Operacional</h2><div class="muted small">Despacho, frota e rota em tempo real</div></div><div class="actions"><button class="btn primary">Atualizar frota</button></div></header>
+                <div class="content"><section class="grid">
+                  <div class="panel col-7" id="mapaDespacho"><h2>Mapa / Tracker</h2><div class="map-box"><div class="map-grid"></div><div class="road r1"></div><div class="road r2"></div><div class="route"></div><div class="pin car"></div><div class="pin phone"></div><div class="pin dest"></div></div><div class="actions" style="margin-top:12px"><button class="btn good">Despachar veículo selecionado</button><button class="btn">Abrir rota</button><button class="btn">Copiar rota</button></div></div>
+                  <div class="panel col-5" id="veiculosDespacho"><h2>Veículos próximos</h2><div class="card-list"><div class="card"><span class="badge good">RAFA online</span><br><b>FHA4B30 — Plataforma</b><br><span class="muted small">Última posição: 1 min • 4,2 km do chamado</span></div><div class="card"><span class="badge warn">GPS celular</span><br><b>DAJ6J95 — Caminhão apoio</b><br><span class="muted small">Fallback por celular • 7,8 km</span></div><div class="card"><span class="badge danger">sem sinal</span><br><b>Guincho reserva</b><br><span class="muted small">Sem posição válida no momento</span></div></div></div>
+                </section></div>
+              </main>
+            </div>
+          </div>
+
+          <div id="screen-financeiro" class="mock-screen">
+            <div class="app-demo">
+              <aside class="sidebar"><div class="sidebar-head"><div class="brand-row"><div class="brand-mark">JM</div><div><div class="sidebar-title">JM GUINCHOS</div><div class="sidebar-sub">financeiro</div></div></div></div><nav class="nav"><button>Dashboard</button><button>Chamados</button><button>Mapa</button><button class="active">Financeiro</button><button>Pagamentos</button><button>Frota</button></nav></aside>
+              <main class="main-demo">
+                <header class="topbar"><div><h2 style="margin:0">Financeiro</h2><div class="muted small">Chamado, despesa, veículo e motorista vinculados</div></div></header>
+                <div class="content"><section class="grid">
+                  <div class="kpi col-3"><span>Receitas</span><strong>R$ 8.240</strong></div><div class="kpi col-3"><span>Despesas</span><strong>R$ 2.180</strong></div><div class="kpi col-3"><span>Lucro previsto</span><strong>R$ 6.060</strong></div><div class="kpi col-3"><span>A receber</span><strong>R$ 3.100</strong></div>
+                  <div class="panel col-7" id="fluxoFinanceiro"><h2>Fluxo financeiro único</h2><table class="table"><tr><th>Origem</th><th>Tipo</th><th>Vínculo</th><th>Status</th></tr><tr><td>Chamado DEL-34922</td><td>Receita R$ 650</td><td>FHA4B30 / João</td><td><span class="badge warn">a receber</span></td></tr><tr><td>Despesa motorista</td><td>Combustível R$ 120</td><td>FHA4B30 / DEL-34922</td><td><span class="badge good">aprovada</span></td></tr><tr><td>Manutenção</td><td>Óleo R$ 450</td><td>DAJ6J95</td><td><span class="badge">registrada</span></td></tr></table></div>
+                  <div class="panel col-5" id="aprovacoes"><h2>Aprovações</h2><div class="card-list"><div class="card"><b>Combustível</b> — R$ 120,00<br><span class="muted small">Motorista João • Ch. DEL-34922</span><div class="actions" style="margin-top:8px"><button class="btn good">Aprovar</button><button class="btn danger">Reprovar</button></div></div><div class="card"><b>Pedágio</b> — R$ 18,60<br><span class="muted small">Aguardando comprovante</span></div></div></div>
+                </section></div>
+              </main>
+            </div>
+          </div>
+
+          <div id="screen-frota" class="mock-screen">
+            <div class="app-demo">
+              <aside class="sidebar"><div class="sidebar-head"><div class="brand-row"><div class="brand-mark">JM</div><div><div class="sidebar-title">JM GUINCHOS</div><div class="sidebar-sub">frota</div></div></div></div><nav class="nav"><button>Dashboard</button><button>Mapa</button><button>Financeiro</button><button class="active">Frota</button><button>Equipe</button></nav></aside>
+              <main class="main-demo">
+                <header class="topbar"><div><h2 style="margin:0">Frota</h2><div class="muted small">Veículos, rastreadores, custos e manutenção</div></div></header>
+                <div class="content"><section class="grid">
+                  <div class="panel col-6" id="cadastroVeiculo"><h2>Cadastro de veículo</h2><div class="form-grid"><div><label>Placa</label><input value="FHA4B30"></div><div><label>Nome</label><input value="Plataforma 01"></div><div><label>Rastreador</label><select><option>RAFA padrão</option><option>GPS celular</option><option>Trackar custom_api</option></select></div><div><label>Device/IMEI</label><input value="device-123"></div><div class="wide"><button class="btn primary">Salvar veículo</button></div></div></div>
+                  <div class="panel col-6" id="custosVeiculo"><h2>Custos e lucratividade</h2><div class="card-list"><div class="card"><b>FHA4B30</b> — Receita R$ 5.200 • Custo R$ 1.430 • Lucro R$ 3.770</div><div class="card"><b>DAJ6J95</b> — Receita R$ 3.040 • Custo R$ 980 • Lucro R$ 2.060</div></div></div>
+                  <div class="panel col-12" id="manutencao"><h2>Manutenção / custos operacionais</h2><table class="table"><tr><th>Veículo</th><th>Tipo</th><th>Valor</th><th>Origem</th></tr><tr><td>FHA4B30</td><td>Combustível</td><td>R$ 120</td><td>Despesa motorista aprovada</td></tr><tr><td>DAJ6J95</td><td>Troca de óleo</td><td>R$ 450</td><td>Manutenção lançada</td></tr></table></div>
+                </section></div>
+              </main>
+            </div>
+          </div>
+
+          <div id="screen-motorista" class="mock-screen">
+            <div class="main-demo">
+              <header class="topbar"><div><h2 style="margin:0">Painel motorista</h2><div class="muted small">João • motorista@jm.com</div></div><div class="actions"><button class="btn primary">Atualizar</button><button class="btn danger">Sair</button></div></header>
+              <main class="content">
+                <section class="grid">
+                  <div class="panel col-7" id="driverCalls"><h2>Meus chamados</h2><div class="card-list"><div class="card"><span class="badge good">Chamado atual</span><br><b>DEL-34922 — HB20 prata</b><br><span class="muted small">Origem: Rod. Washington Luís km 440 • Destino: Oficina JM</span><div class="actions" style="margin-top:8px"><button class="btn primary">Selecionar chamado</button><button class="btn">Abrir rota</button></div></div></div></div>
+                  <div class="panel col-5" id="driverGps"><h2>Localização do celular</h2><p class="muted small">Use quando o guincho estiver sem GPS ou o sinal do rastreador atrasar.</p><div class="form-grid"><div class="wide"><label>Chamado rastreado pelo celular</label><select><option>DEL-34922 — HB20 prata</option></select></div><div class="wide actions"><button class="btn good">Ativar localização</button><button class="btn danger">Parar localização</button></div><div class="wide small muted">Localização pronta para enviar ao RTDB.</div></div></div>
+                  <div class="panel col-6" id="driverStatus"><h2>Status do atendimento</h2><div class="actions"><button class="btn">A caminho</button><button class="btn warn">No local</button><button class="btn">Carregado</button><button class="btn good">Finalizar</button></div></div>
+                  <div class="panel col-6" id="driverExpense"><h2>Lançar despesa</h2><div class="form-grid"><div><label>Tipo</label><select><option>Combustível</option><option>Pedágio</option><option>Manutenção</option></select></div><div><label>Valor</label><input value="R$ 120,00"></div><div class="wide"><label>Observação</label><textarea>Abastecimento durante atendimento DEL-34922</textarea></div><div class="wide"><button class="btn primary">Enviar despesa</button></div></div></div>
+                  <div class="panel col-12" id="driverProofs"><h2>Provas do atendimento</h2><div class="proof-thumbs"><div class="proof">Foto frente</div><div class="proof">Foto painel</div><div class="proof">Assinatura</div><div class="proof">Áudio 1</div><div class="proof">Áudio 2</div><div class="proof">Comprovante</div></div><div class="actions" style="margin-top:10px"><button class="btn primary">Enviar provas</button><button class="btn">Adicionar áudio</button><button class="btn">Limpar assinatura</button></div></div>
+                </section>
+              </main>
+            </div>
+          </div>
+
+          <div id="screen-cliente" class="mock-screen">
+            <main class="public-page-demo"><section class="public-shell-demo">
+              <section class="panel" id="publicStatus"><h1>JM Guinchos</h1><p class="muted">Acompanhamento do atendimento</p><div class="kpi"><span>Status</span><strong>Motorista a caminho</strong></div><div class="actions" style="margin-top:12px"><button class="btn good">Falar com a JM</button><button class="btn">Ver relatório</button></div></section>
+              <section class="panel" id="publicTimeline"><h2>Linha do tempo</h2><div class="timeline"><div class="event">Atendimento recebido</div><div class="event">Guincho despachado</div><div class="event">Motorista a caminho</div></div></section>
+              <section class="panel" id="publicProofs"><h2>Fotos e provas liberadas</h2><div class="proof-thumbs"><div class="proof">Foto liberada</div><div class="proof">Áudio liberado</div><div class="proof">Assinatura</div></div></section>
+              <section class="panel" id="publicChat"><h2>Chat com a JM</h2><div class="chat-messages"><div class="msg client">Cliente: O guincho já saiu?</div><div class="msg">JM: Sim, o motorista está a caminho.</div></div><div class="form-grid" style="margin-top:12px"><div class="wide"><textarea placeholder="Digite sua mensagem"></textarea></div><button class="btn primary wide">Enviar mensagem</button></div></section>
+            </section></main>
+          </div>
+
+          <div id="screen-relatorio" class="mock-screen">
+            <main class="report-demo"><div class="report-page">
+              <div class="actions" style="margin-bottom:12px"><button class="btn primary">Imprimir / salvar PDF</button><button class="btn">Voltar ao painel</button></div>
+              <section class="report-card" id="reportHeader"><h1>Relatório de atendimento</h1><p>JM Guinchos • Protocolo DEL-34922</p><span class="badge good">Finalizado</span></section>
+              <section class="report-card" id="reportDetails"><h2>Dados do chamado</h2><div class="report-grid"><div class="report-field"><span>Cliente</span><strong>Maria Aparecida</strong></div><div class="report-field"><span>Veículo</span><strong>HB20 prata — ABC1D23</strong></div><div class="report-field"><span>Motorista</span><strong>João — Plataforma 01</strong></div><div class="report-field"><span>Seguradora</span><strong>Assistência Delta</strong></div></div></section>
+              <section class="report-card" id="reportTimeline"><h2>Linha do tempo</h2><div class="timeline"><div class="event">Chamado criado às 14:12</div><div class="event">Motorista a caminho às 14:20</div><div class="event">Veículo carregado às 15:05</div><div class="event">Entregue às 15:45</div></div></section>
+              <section class="report-card" id="reportProofs"><h2>Fotos, assinatura e áudios</h2><div class="proof-thumbs"><div class="proof">Foto 1</div><div class="proof">Foto 2</div><div class="proof">Assinatura</div><div class="proof">Áudio 1</div><div class="proof">Áudio 2</div><div class="proof">Comprovante</div></div></section>
+              <div class="signature-footer">Powered by thIAguinho Soluções Digitais</div>
+            </div></main>
+          </div>
+
+          <div id="focus" class="focus"></div>
+          <div id="balloon" class="balloon"><h3 id="balloonTitle"></h3><p id="balloonText"></p></div>
+        </div>
+      </div>
+      <aside class="curiosity">
+        <h3>Como fazer na prática</h3>
+        <div id="question" class="question"></div>
+        <ul id="bullets"></ul>
+        <div id="answer" class="answer"></div>
+      </aside>
+    </div>
+    <div class="footer">Powered by thIAguinho Soluções Digitais</div>
+  </section>
+</div>
+
+<script>
+const steps = [
+  {screen:"dashboard",mode:"desktop",target:"#dashKpis",group:"Visão geral",title:"Entender o painel inicial",sub:"Dashboard operacional",lesson:"O gestor começa pelo Dashboard para ver volume de chamados, frota em rota, receita prevista e pendências.",why:"Antes de clicar em qualquer coisa, ele entende se a operação está normal ou com alerta.",question:"O que olhar primeiro?",bullets:["Chamados de hoje.","Atendimentos em andamento.","Despesas pendentes e chamados a faturar."],answer:"O Dashboard é a visão de saúde da operação.",balloonTitle:"Dashboard não é enfeite",balloon:"Ele resume o que precisa de ação agora: atendimento, dinheiro, frota e pendência."},
+  {screen:"dashboard",mode:"desktop",target:"#dashCentral",group:"Central",title:"Ler a fila operacional",sub:"Status dos atendimentos",lesson:"A fila mostra cada atendimento por status: aguardando despacho, motorista a caminho, no local, finalizado ou cancelado.",why:"Isso evita perguntar no grupo ou ligar para todo mundo.",question:"Como saber o que precisa de ação?",bullets:["Aguardando despacho precisa de motorista.","No local precisa acompanhamento.","Finalizado precisa prova e faturamento."],answer:"Status correto vira controle operacional.",balloonTitle:"Fila por prioridade",balloon:"Cada card representa um atendimento vivo, com próxima ação clara."},
+  {screen:"chamado",mode:"desktop",target:"#formChamado",group:"Chamado",title:"Abrir um chamado",sub:"Cadastro completo do atendimento",lesson:"Preencha cliente, telefone, seguradora, protocolo, placa, veículo, origem, destino, serviço e valor. Depois clique em Salvar chamado.",why:"O chamado é a raiz do sistema. Se ele nasce completo, o resto trabalha sozinho.",question:"Por que preencher bem?",bullets:["O motorista recebe dados certos.","O cliente pode acompanhar pelo link.","O financeiro fica vinculado ao atendimento."],answer:"Um chamado bem preenchido reduz retrabalho e erro.",balloonTitle:"Passo 1: salvar chamado",balloon:"Use o chamado como ficha viva do atendimento. Ele alimenta despacho, rota, provas e faturamento."},
+  {screen:"chamado",mode:"desktop",target:"#listaChamados",group:"Chamado",title:"Acompanhar chamados",sub:"Fila e histórico",lesson:"Depois de salvo, o chamado aparece na fila. Ali o gestor edita, despacha, gera link público, cancela, finaliza ou manda para faturamento.",why:"Nada deve ficar perdido em conversa solta.",question:"O que acontece com o chamado salvo?",bullets:["Entra na fila operacional.","Pode receber motorista e veículo.","Gera timeline, provas e relatório."],answer:"A fila vira o quadro de controle da operação.",balloonTitle:"Chamado vira tarefa",balloon:"Ele deixa de ser ligação e vira atendimento rastreável."},
+  {screen:"despacho",mode:"desktop",target:"#veiculosDespacho",group:"Despacho",title:"Escolher veículo e motorista",sub:"Despacho com contexto",lesson:"Selecione o chamado e escolha o veículo/motorista. O sistema deve mostrar fonte de posição: RAFA, GPS celular ou sem sinal.",why:"Veículo cadastrado só aparece no mapa quando tem coordenada real.",question:"Por que meu veículo cadastrado não aparece no mapa?",bullets:["Cadastro não é localização.","O mapa precisa de RAFA, GPS celular ou posição manual.","Sem coordenada não existe marcador real."],answer:"O cadastro cria a ficha; o rastreador/GPS cria o marcador.",balloonTitle:"Fonte da localização",balloon:"RAFA é a fonte principal. GPS celular entra como fallback quando liberado."},
+  {screen:"despacho",mode:"desktop",target:"#mapaDespacho",group:"Mapa",title:"Traçar rota e acompanhar",sub:"Mapa, rota e posição",lesson:"Com origem, destino e posição do veículo, o mapa desenha a rota e mostra o deslocamento. Se a rota exata falhar, usa fallback.",why:"Central precisa ver onde está o guincho sem ficar ligando.",question:"Como traçar rota com precisão?",bullets:["Ter origem e destino válidos.","Ter posição real do veículo.","Usar rota OSM/OSRM ou fallback."],answer:"Mapa profissional depende de dados limpos e posição viva.",balloonTitle:"Rota operacional",balloon:"A rota liga chamado, veículo e motorista para a central acompanhar."},
+  {screen:"motorista",mode:"mobile",target:"#driverCalls",group:"Motorista",title:"Selecionar chamado",sub:"Primeiro passo do motorista",lesson:"No painel do motorista, escolha o chamado atual antes de ligar GPS, enviar prova ou lançar despesa.",why:"Sem chamado selecionado, a ação fica sem vínculo.",question:"Por que o sistema pede para selecionar chamado?",bullets:["Para saber qual atendimento está em campo.","Para ligar GPS ao chamado correto.","Para vincular despesas e provas."],answer:"Toda ação do motorista precisa estar ligada ao chamado certo.",balloonTitle:"Escolha o chamado",balloon:"Selecionar chamado evita prova, GPS ou despesa sem contexto."},
+  {screen:"motorista",mode:"mobile",target:"#driverGps",group:"Motorista",title:"Ligar GPS do celular",sub:"Módulo opcional",lesson:"Se o módulo estiver ativo, selecione o chamado e toque em Ativar localização. O GPS vai para o Realtime Database.",why:"Isso evita atualizar o chamado no Firestore o tempo todo e travar o painel.",question:"Quando usar GPS do celular?",bullets:["Quando RAFA atrasar ou falhar.","Quando a central precisa de fallback.","Quando o superadmin liberou o módulo."],answer:"GPS do celular complementa o rastreador; não substitui a frota oficial.",balloonTitle:"GPS com vínculo",balloon:"Ele precisa de chamado e veículo para aparecer corretamente no mapa do gestor."},
+  {screen:"motorista",mode:"mobile",target:"#driverStatus",group:"Motorista",title:"Mudar status",sub:"Linha do tempo do atendimento",lesson:"Use A caminho, No local, Carregado e Finalizar conforme a etapa real do serviço.",why:"Cada clique vira evento na timeline para gestor, cliente e relatório.",question:"Por que status é tão importante?",bullets:["Reduz ligações repetidas.","Prova horários do atendimento.","Mostra gargalos operacionais."],answer:"Status bem usado vira rastreabilidade.",balloonTitle:"Status de campo",balloon:"O motorista atualiza o atendimento com poucos toques."},
+  {screen:"motorista",mode:"mobile",target:"#driverExpense",group:"Motorista",title:"Lançar despesa",sub:"Combustível, pedágio e manutenção",lesson:"Informe tipo, valor e observação. Ao enviar, fica pendente para gestor aprovar.",why:"Motorista lança uma vez; gestor aprova; o financeiro e a frota recebem o custo.",question:"Para onde vai a despesa?",bullets:["Fica pendente para aprovação.","Depois vira saída financeira.","Entra no custo do veículo e do chamado."],answer:"Despesa não pode ficar solta. Ela precisa virar custo rastreável.",balloonTitle:"Despesa conectada",balloon:"Combustível vira custo operacional da frota; manutenção entra como manutenção/custo quando aplicável."},
+  {screen:"motorista",mode:"mobile",target:"#driverProofs",group:"Motorista",title:"Enviar provas",sub:"Fotos, assinatura e áudios",lesson:"Adicione fotos, assinatura e vários áudios. Depois clique em Enviar provas e aguarde sucesso ou erro claro.",why:"Seguradora e cliente podem pedir evidências. A JM precisa ter tudo organizado.",question:"O que pode virar prova?",bullets:["Fotos do veículo/local.","Assinatura do cliente.","Múltiplos áudios e observações."],answer:"Cada prova deve ficar vinculada ao chamado, motorista e veículo.",balloonTitle:"Provas com retorno",balloon:"O botão nunca pode ficar mudo: precisa mostrar enviando, sucesso ou erro."},
+  {screen:"financeiro",mode:"desktop",target:"#aprovacoes",group:"Gestor",title:"Aprovar despesas",sub:"Validação financeira",lesson:"O gestor confere a despesa do motorista e aprova ou reprova. Ao aprovar, o sistema cria a saída financeira.",why:"Isso impede que custo de campo fique invisível.",question:"O que muda ao aprovar?",bullets:["Cria transaction financeira.","Vincula veículo e chamado.","Atualiza KPI e lucro."],answer:"A aprovação transforma solicitação em dado financeiro oficial.",balloonTitle:"Aprovação é o gatilho",balloon:"Despesa aprovada alimenta financeiro, frota e KPI."},
+  {screen:"financeiro",mode:"desktop",target:"#fluxoFinanceiro",group:"Financeiro",title:"Gerir recebimentos",sub:"Saldo e faturamento",lesson:"Recebimentos devem ser lançados vinculados ao chamado. Pagamento parcial mantém histórico e atualiza saldo.",why:"Sem vínculo, o financeiro vira planilha separada.",question:"Como evitar retrabalho financeiro?",bullets:["Vincular ao chamado.","Vincular ao pagador/seguradora.","Manter histórico de parcelas."],answer:"O fluxo correto é atendimento → cobrança → recebimento → saldo.",balloonTitle:"Financeiro único",balloon:"Receita, despesa e lucro precisam conversar com chamado, veículo e motorista."},
+  {screen:"frota",mode:"desktop",target:"#cadastroVeiculo",group:"Frota",title:"Cadastrar veículo",sub:"Ficha + rastreador",lesson:"Cadastre placa, nome e rastreador/device. Isso cria a ficha da frota, mas o mapa só mostra se houver posição.",why:"Separar cadastro de localização evita falsa expectativa.",question:"O que preciso para aparecer no mapa?",bullets:["Veículo cadastrado.","Rastreador configurado ou GPS celular ativo.","Coordenada válida recebida."],answer:"Cadastro cria a ficha; rastreamento cria o ponto no mapa.",balloonTitle:"Veículo não é marcador",balloon:"Sem posição real, o sistema não inventa localização."},
+  {screen:"frota",mode:"desktop",target:"#custosVeiculo",group:"Frota",title:"Ver lucro por veículo",sub:"Centro de custo",lesson:"A frota mostra receita, custo e lucro por veículo, usando despesas aprovadas e chamados vinculados.",why:"Um caminhão pode faturar muito e ainda dar pouco lucro se tiver custo alto.",question:"Por que controlar por veículo?",bullets:["Saber qual guincho dá mais lucro.","Ver manutenção e combustível.","Decidir troca, revisão ou escala."],answer:"Veículo é centro de custo e produtividade.",balloonTitle:"Lucro da frota",balloon:"O gestor vê se o caminhão está ganhando ou consumindo dinheiro."},
+  {screen:"frota",mode:"desktop",target:"#manutencao",group:"Frota",title:"Manutenção e custos",sub:"Histórico técnico e financeiro",lesson:"Manutenções com valor entram como custo. Combustível não é manutenção, mas aparece como custo operacional do veículo.",why:"Isso deixa claro onde está o dinheiro da frota.",question:"Combustível é manutenção?",bullets:["Não. É custo operacional.","Óleo, pneu e freio podem ser manutenção.","Tudo deve alimentar o KPI do veículo."],answer:"Separar tipo de custo deixa o relatório mais confiável.",balloonTitle:"Custo bem classificado",balloon:"Combustível, pedágio e manutenção aparecem no lugar certo."},
+  {screen:"cliente",mode:"mobile",target:"#publicStatus",group:"Cliente",title:"Gerar link público",sub:"Acompanhamento sem login",lesson:"No painel JM, gere e copie o link do cliente. Ele acompanha status e informações liberadas.",why:"O cliente deixa de ligar toda hora perguntando onde está o guincho.",question:"O que o cliente pode ver?",bullets:["Status simples.","Timeline autorizada.","Provas liberadas e chat."],answer:"O cliente acompanha o próprio atendimento, não a empresa inteira.",balloonTitle:"Portal público seguro",balloon:"Cliente vê somente dados liberados pela JM."},
+  {screen:"cliente",mode:"mobile",target:"#publicTimeline",group:"Cliente",title:"Acompanhar timeline",sub:"Etapas públicas",lesson:"A timeline pública traduz status internos em linguagem simples: recebido, a caminho, no local, transporte, entregue e finalizado.",why:"Linguagem operacional interna não deve confundir o cliente.",question:"Por que simplificar status?",bullets:["Cliente entende rápido.","Evita ansiedade.","Reduz atendimento repetitivo."],answer:"Status público precisa ser humano, não técnico.",balloonTitle:"Timeline pública",balloon:"A JM decide o que é exibido para o cliente."},
+  {screen:"cliente",mode:"mobile",target:"#publicProofs",group:"Cliente",title:"Liberar provas",sub:"Controle de visibilidade",lesson:"O gestor decide quais fotos, assinaturas e áudios podem aparecer para cliente ou seguradora.",why:"Nem toda prova interna deve ser pública.",question:"Quem decide o que aparece?",bullets:["Gestor/admin libera ou bloqueia.","Cliente vê apenas o permitido.","Seguradora pode receber provas específicas."],answer:"Visibilidade por prova protege a empresa e o cliente.",balloonTitle:"Provas liberadas",balloon:"O portal não mostra prova interna sem autorização."},
+  {screen:"cliente",mode:"mobile",target:"#publicChat",group:"Cliente",title:"Usar chat",sub:"Conversa vinculada ao chamado",lesson:"Cliente envia mensagem no portal; gestor ou atendente responde pelo painel JM.",why:"A conversa fica dentro do atendimento, com contexto e histórico.",question:"Por que não só WhatsApp?",bullets:["O chat fica vinculado ao chamado.","Facilita auditoria.","Ajuda negociação e suporte."],answer:"Chat no sistema evita conversa perdida sem contexto.",balloonTitle:"Chat com histórico",balloon:"Cada mensagem pertence ao token/chamado correto."},
+  {screen:"relatorio",mode:"desktop",target:"#reportHeader",group:"Relatório",title:"Abrir relatório",sub:"Resumo oficial do atendimento",lesson:"Depois do atendimento, abra o relatório para conferir dados principais, status e protocolo.",why:"Relatório é o documento que prova o serviço prestado.",question:"Quando usar o relatório?",bullets:["Enviar para seguradora.","Entregar ao cliente.","Arquivar prova interna."],answer:"O relatório transforma operação em documento.",balloonTitle:"Relatório profissional",balloon:"Ele reúne o atendimento em uma visão limpa e auditável."},
+  {screen:"relatorio",mode:"desktop",target:"#reportDetails",group:"Relatório",title:"Conferir dados",sub:"Cliente, veículo, motorista e seguradora",lesson:"Revise os dados antes de imprimir ou salvar PDF.",why:"Relatório com dados errados gera retrabalho e cobrança da seguradora.",question:"O que conferir antes de exportar?",bullets:["Cliente e placa.","Motorista e veículo da frota.","Protocolo e seguradora."],answer:"Conferência evita relatório rejeitado.",balloonTitle:"Dados do chamado",balloon:"O relatório puxa do chamado; por isso abrir chamado certo é essencial."},
+  {screen:"relatorio",mode:"desktop",target:"#reportProofs",group:"Relatório",title:"Exportar provas",sub:"Fotos, assinatura e áudios",lesson:"O relatório lista provas autorizadas. No PDF, áudios aparecem como anexos/links e fotos como evidências.",why:"PDF não toca áudio, mas precisa registrar que o áudio existe.",question:"Como áudio entra no PDF?",bullets:["Com nome, data e autor.","Com link quando digital.","Como evidência anexada."],answer:"O relatório mostra a existência e o vínculo da prova.",balloonTitle:"Provas anexadas",balloon:"Fotos, assinatura e áudios compõem o pacote de evidências."}
+];
+
+const state = { i:0, playing:false, voice:false, speed:1, timer:null };
+const $ = (id)=>document.getElementById(id);
+const els = {
+  device:$("device"), focus:$("focus"), balloon:$("balloon"), balloonTitle:$("balloonTitle"), balloonText:$("balloonText"),
+  tag:$("tag"), lessonTitle:$("lessonTitle"), lessonText:$("lessonText"), why:$("why"),
+  stageTitle:$("stageTitle"), stageSub:$("stageSub"), question:$("question"), bullets:$("bullets"), answer:$("answer"),
+  fill:$("fill"), counter:$("counter"), stepList:$("stepList")
+};
+
+function buildList(){
+  els.stepList.innerHTML = steps.map((s,i)=>`<div class="step-item" data-i="${i}"><div class="step-num">${i+1}</div><div><strong>${s.group} — ${s.title}</strong><small>${s.sub}</small></div></div>`).join("");
+  els.stepList.querySelectorAll(".step-item").forEach(item=>item.onclick=()=>go(Number(item.dataset.i), false));
+}
+function setScreen(name){
+  document.querySelectorAll(".mock-screen").forEach(s=>s.classList.remove("active"));
+  const el = $("screen-"+name);
+  if(el) el.classList.add("active");
+}
+function setMode(mode){
+  els.device.classList.toggle("mobile", mode==="mobile");
+  $("mobileBtn").className = mode==="mobile" ? "g-amber" : "g-light";
+  $("desktopBtn").className = mode==="desktop" ? "g-amber" : "g-light";
+  setTimeout(position, 120);
+}
+function position(){
+  const s = steps[state.i];
+  const target = document.querySelector(s.target);
+  const d = els.device.getBoundingClientRect();
+  if(!target){ return; }
+  const r = target.getBoundingClientRect();
+  const left = r.left - d.left, top = r.top - d.top;
+  els.focus.style.left = Math.max(6,left-6)+"px";
+  els.focus.style.top = Math.max(6,top-6)+"px";
+  els.focus.style.width = Math.min(d.width-12, r.width+12)+"px";
+  els.focus.style.height = Math.min(d.height-12, r.height+12)+"px";
+  let bx = left + r.width + 12;
+  let by = top + 4;
+  const bw = 330, bh = 145;
+  if(bx + bw > d.width - 10) bx = left - bw - 12;
+  if(bx < 10) bx = 10;
+  if(by + bh > d.height - 10) by = d.height - bh - 10;
+  if(by < 10) by = 10;
+  els.balloon.style.left = bx+"px";
+  els.balloon.style.top = by+"px";
+}
+function speak(text){
+  if(!state.voice || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "pt-BR";
+  u.rate = .98;
+  speechSynthesis.speak(u);
+}
+function go(i, auto){
+  clearTimeout(state.timer);
+  state.i = (i + steps.length) % steps.length;
+  const s = steps[state.i];
+  setScreen(s.screen);
+  setMode(s.mode);
+  els.tag.textContent = s.group;
+  els.lessonTitle.textContent = s.title;
+  els.lessonText.textContent = s.lesson;
+  els.why.textContent = s.why;
+  els.stageTitle.textContent = s.title;
+  els.stageSub.textContent = s.sub;
+  els.question.textContent = s.question;
+  els.bullets.innerHTML = s.bullets.map(b=>`<li>${b}</li>`).join("");
+  els.answer.textContent = s.answer;
+  els.balloonTitle.textContent = s.balloonTitle;
+  els.balloonText.textContent = s.balloon;
+  els.fill.style.width = ((state.i+1)/steps.length*100)+"%";
+  els.counter.textContent = `Etapa ${state.i+1} de ${steps.length} — ${s.group}`;
+  document.querySelectorAll(".step-item").forEach((item,idx)=>item.classList.toggle("active", idx===state.i));
+  setTimeout(position, 180);
+  speak(`${s.title}. ${s.lesson}. ${s.why}`);
+  if(auto && state.playing){
+    const delay = state.speed===2 ? 5600 : state.speed===.7 ? 10500 : 7900;
+    state.timer = setTimeout(()=>go(state.i+1, true), delay);
+  }
+}
+function play(){ state.playing = true; go(state.i, true); }
+function pause(){ state.playing = false; clearTimeout(state.timer); if("speechSynthesis" in window) speechSynthesis.cancel(); }
+
+$("playBtn").onclick = play;
+$("pauseBtn").onclick = pause;
+$("prevBtn").onclick = ()=>go(state.i-1, state.playing);
+$("nextBtn").onclick = ()=>go(state.i+1, state.playing);
+$("restartBtn").onclick = ()=>{ state.i=0; go(0, state.playing); };
+$("mobileBtn").onclick = ()=>setMode("mobile");
+$("desktopBtn").onclick = ()=>setMode("desktop");
+$("voiceBtn").onclick = ()=>{
+  state.voice = !state.voice;
+  $("voiceBtn").textContent = state.voice ? "🔊 VOZ ON" : "🔇 VOZ OFF";
+  if(!state.voice && "speechSynthesis" in window) speechSynthesis.cancel();
+  if(state.voice) speak(`${steps[state.i].title}. ${steps[state.i].lesson}`);
+};
+$("speedBtn").onclick = ()=>{
+  state.speed = state.speed===1 ? 2 : state.speed===2 ? .7 : 1;
+  $("speedBtn").textContent = state.speed===2 ? "RÁPIDO" : state.speed===.7 ? "LENTO" : "NORMAL";
+  if(state.playing) go(state.i, true);
+};
+window.addEventListener("resize", position);
+buildList();
+go(0, false);
+</script>
+</body>
+</html>
